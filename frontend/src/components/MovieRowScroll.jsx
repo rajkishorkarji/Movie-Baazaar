@@ -1,0 +1,136 @@
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getTrending, getPopular, getTopRated, getByGenre, searchMovies, getBollywood, getHollywood, getSouthIndian, getHindiDubbed, getWebSeries, getRecommendations } from '../api';
+
+const FETCH_MAP = {
+  trending:    () => getTrending(),
+  popular:     () => getPopular(),
+  topRated:    () => getTopRated(),
+  genre:       (p) => getByGenre(p),
+  search:      (p) => searchMovies(p),
+  bollywood:   () => getBollywood(),
+  hollywood:   () => getHollywood(),
+  southIndian: () => getSouthIndian(),
+  hindiDubbed: () => getHindiDubbed(),
+  webSeries:   () => getWebSeries(),
+  recommend:   (p) => getRecommendations(p),
+};
+
+const MovieCard = ({ movie }) => {
+  const [hovered, setHovered] = useState(false);
+  const navigate = useNavigate();
+  const img = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster';
+
+  const rating = movie.vote_average || movie.rating;
+
+  return (
+    <div
+      className="flex-none w-40 md:w-48 cursor-pointer group"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Poster */}
+      <div className="relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-black/70">
+        <img
+          className="w-full h-60 md:h-72 object-cover transition-transform duration-500 group-hover:scale-105"
+          src={img}
+          alt={movie.title || movie.name}
+          loading="lazy"
+        />
+
+        {/* Rating Badge */}
+        {rating > 0 && (
+          <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1">
+            <span className="text-yellow-400 text-xs">★</span>
+            <span className="text-white text-xs font-semibold">{Number(rating).toFixed(1)}</span>
+          </div>
+        )}
+
+        {/* Hover overlay */}
+        <div className={`absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-0'}`}>
+          <button
+            onClick={() => navigate(`/movie/${movie.id}`)}
+            className="bg-red-600 hover:bg-red-500 text-white text-sm px-5 py-2 rounded-lg font-bold transition-colors shadow-lg"
+          >
+            ▶ Watch
+          </button>
+        </div>
+      </div>
+
+      {/* Title below poster */}
+      <div className="mt-2 px-0.5">
+        <p className="text-white text-xs font-semibold leading-snug line-clamp-3">
+          {movie.title || movie.name}
+        </p>
+        {(movie.release_date || movie.first_air_date) && (
+          <p className="text-gray-500 text-xs mt-0.5">
+            {(movie.release_date || movie.first_air_date)?.slice(0, 4)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const MovieRowScroll = ({ title, fetchType, fetchParam }) => {
+  const [movies, setMovies]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [canLeft, setCanLeft]   = useState(false);
+  const [canRight, setCanRight] = useState(true);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const fn = FETCH_MAP[fetchType];
+    if (!fn) return;
+    setLoading(true);
+    fn(fetchParam)
+      .then(r => setMovies(r.data?.results || []))
+      .catch(e => console.error(title, e))
+      .finally(() => setLoading(false));
+  }, [fetchType, fetchParam]);
+
+  const scroll = (d) => ref.current?.scrollBy({ left: d * 400, behavior: 'smooth' });
+  const onScroll = () => {
+    if (!ref.current) return;
+    setCanLeft(ref.current.scrollLeft > 0);
+    setCanRight(ref.current.scrollLeft < ref.current.scrollWidth - ref.current.clientWidth - 10);
+  };
+
+  return (
+    <div className="mb-10 group/row">
+      <div className="flex items-center justify-between mb-4 px-6 md:px-10">
+        <h2 className="text-white text-lg font-bold flex items-center gap-3">
+          <span className="w-1 h-5 bg-red-600 rounded-full" />{title}
+        </h2>
+      </div>
+      <div className="relative">
+        {canLeft && (
+          <button onClick={() => scroll(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 hover:bg-red-600 border border-gray-700 rounded-full flex items-center justify-center text-white text-xl transition-all">‹</button>
+        )}
+        {canRight && !loading && movies.length > 0 && (
+          <button onClick={() => scroll(1)} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 hover:bg-red-600 border border-gray-700 rounded-full flex items-center justify-center text-white text-xl transition-all">›</button>
+        )}
+        <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
+
+        <div ref={ref} onScroll={onScroll} className="flex overflow-x-scroll scrollbar-hide gap-3 px-6 md:px-10 pb-2">
+          {loading
+            ? [...Array(8)].map((_, i) => (
+                <div key={i} className="flex-none w-36 md:w-44">
+                  <div className="w-full h-52 md:h-64 bg-gray-800/60 animate-pulse rounded-lg" />
+                  <div className="mt-2 h-3 bg-gray-800/40 animate-pulse rounded w-3/4" />
+                </div>
+              ))
+            : movies.length === 0
+              ? <p className="text-gray-600 py-8 text-sm">No movies found.</p>
+              : movies.map(m => <MovieCard key={m.id} movie={m} />)
+          }
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MovieRowScroll;
