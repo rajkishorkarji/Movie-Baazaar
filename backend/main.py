@@ -18,7 +18,7 @@ api = FastAPI(title="Movie Baazaar API", version="1.0.0")
 
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "https://movie-baazaar-eosd571k1-rajkishorkarjis-projects.vercel.app"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
