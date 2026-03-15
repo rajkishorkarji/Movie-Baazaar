@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const TMDB_KEY  = '19752fb21d9c9448fe7e4ecfe88a7d8d';
 const TMDB_BASE = 'https://api.themoviedb.org/3';
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_BASE = 'https://movie-baazaar.onrender.com';
 
 // Generate or retrieve session ID
 const getSessionId = () => {
