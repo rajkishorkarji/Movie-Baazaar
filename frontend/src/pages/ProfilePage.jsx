@@ -6,13 +6,34 @@ import API from '../api';
 const ProfilePage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [history, setHistory] = useState([]);
-  const [ratings, setRatings] = useState([]);
-  const [tab, setTab] = useState('history');
+  const [history, setHistory]         = useState([]);
+  const [ratings, setRatings]         = useState([]);
+  const [commentsCount, setCommentsCount] = useState(0);
+  const [tab, setTab]                 = useState('history');
+  const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
     if (!user) { navigate('/'); return; }
-    API.get('/history').then(r => setHistory(r.data)).catch(() => {});
+
+    // ✅ FIXED: Load both history AND ratings AND profile summary
+    const fetchAll = async () => {
+      setLoading(true);
+      try {
+        const [histRes, profileRes] = await Promise.all([
+          API.get('/history'),
+          API.get('/profile'),
+        ]);
+        setHistory(histRes.data);
+        setRatings(profileRes.data.recent_ratings || []);
+        setCommentsCount(profileRes.data.comments_count || 0);
+      } catch (e) {
+        console.error('Profile load error:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
   }, [user]);
 
   if (!user) return null;
@@ -21,6 +42,7 @@ const ProfilePage = () => {
 
   return (
     <div className="bg-[#0a0a0a] min-h-screen text-white pt-24 px-6 md:px-16">
+
       {/* Profile Header */}
       <div className="flex items-center gap-6 mb-10">
         <div className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center text-2xl font-black">
@@ -44,9 +66,9 @@ const ProfilePage = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         {[
-          { label: 'Movies Watched', value: history.length },
-          { label: 'Movies Rated', value: ratings.length },
-          { label: 'Reviews Written', value: 0 },
+          { label: 'Movies Watched', value: loading ? '...' : history.length },
+          { label: 'Movies Rated',   value: loading ? '...' : ratings.length },
+          { label: 'Reviews Written', value: loading ? '...' : commentsCount },
         ].map(s => (
           <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
             <p className="text-3xl font-black text-red-500">{s.value}</p>
@@ -70,11 +92,18 @@ const ProfilePage = () => {
         ))}
       </div>
 
-      {/* Watch History */}
+      {/* Watch History Tab */}
       {tab === 'history' && (
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-          {history.length === 0 ? (
-            <p className="text-gray-600 col-span-full py-8">No watch history yet. Start watching movies!</p>
+          {loading ? (
+            [...Array(8)].map((_, i) => (
+              <div key={i}>
+                <div className="w-full aspect-[2/3] bg-gray-800/60 animate-pulse rounded-lg" />
+                <div className="mt-1 h-3 bg-gray-800/40 animate-pulse rounded w-3/4" />
+              </div>
+            ))
+          ) : history.length === 0 ? (
+            <p className="text-gray-600 col-span-full py-8 text-sm">No watch history yet. Start watching movies!</p>
           ) : history.map(h => (
             <div
               key={h.id}
@@ -86,7 +115,7 @@ const ProfilePage = () => {
                   ? `https://image.tmdb.org/t/p/w200${h.poster_path}`
                   : 'https://via.placeholder.com/200x300/1a1a1a/555?text=?'}
                 alt={h.movie_title}
-                className="w-full rounded-lg object-cover aspect-[2/3] group-hover:opacity-80 transition-opacity"
+                className="w-full rounded-lg object-cover aspect-[2/3] group-hover:opacity-80 transition-opacity border border-white/5"
               />
               <p className="text-xs text-gray-400 mt-1 line-clamp-2">{h.movie_title}</p>
               <p className="text-xs text-gray-600">{new Date(h.watched_at).toLocaleDateString()}</p>
@@ -94,6 +123,35 @@ const ProfilePage = () => {
           ))}
         </div>
       )}
+
+      {/* ✅ FIXED: Ratings tab now shows actual data */}
+      {tab === 'ratings' && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+          {loading ? (
+            [...Array(8)].map((_, i) => (
+              <div key={i}>
+                <div className="w-full aspect-[2/3] bg-gray-800/60 animate-pulse rounded-lg" />
+                <div className="mt-1 h-3 bg-gray-800/40 animate-pulse rounded w-3/4" />
+              </div>
+            ))
+          ) : ratings.length === 0 ? (
+            <p className="text-gray-600 col-span-full py-8 text-sm">No ratings yet. Rate movies to see them here!</p>
+          ) : ratings.map(r => (
+            <div key={r.id} className="cursor-pointer group" onClick={() => navigate(`/movie/${r.tmdb_id}`)}>
+              <div className="w-full aspect-[2/3] bg-gray-800/60 rounded-lg flex items-center justify-center border border-white/5 group-hover:border-red-600/30 transition-colors">
+                <span className="text-3xl font-black text-red-500">{r.score}</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">TMDB #{r.tmdb_id}</p>
+              <div className="flex gap-0.5 mt-0.5">
+                {[1,2,3,4,5].map(s => (
+                  <span key={s} className={`text-xs ${s <= r.score ? 'text-yellow-400' : 'text-gray-700'}`}>★</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
     </div>
   );
 };

@@ -8,9 +8,11 @@ const TMDB = axios.create({
   params: { api_key: TMDB_KEY },
 });
 
-// Your FastAPI backend
+// ✅ Uses VITE_API_URL in production (Render), falls back to localhost for local dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const API = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: API_BASE_URL,
   timeout: 10000,
 });
 
