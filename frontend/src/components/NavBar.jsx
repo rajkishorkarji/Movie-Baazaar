@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
 
 const GENRES = [
   { id: 28,    name: 'Action' },
@@ -23,6 +26,10 @@ const GENRES = [
 ];
 
 const NavBar = ({ onSearch, onGenreSelect, onCategorySelect }) => {
+
+  const { user } = useAuth();
+const navigate = useNavigate();
+
   const [scrolled, setScrolled]     = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery]           = useState('');
@@ -31,7 +38,8 @@ const NavBar = ({ onSearch, onGenreSelect, onCategorySelect }) => {
   const [mobileGenreOpen, setMobileGenreOpen] = useState(false);
   const location = useLocation();
   const genreRef = useRef(null);
-
+  const [showAuth, setShowAuth] = useState(false);
+  {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener('scroll', handleScroll);
@@ -252,6 +260,22 @@ const NavBar = ({ onSearch, onGenreSelect, onCategorySelect }) => {
               </div>
             )}
           </div>
+          {user ? (
+  <button
+    onClick={() => navigate('/profile')}
+    className="w-9 h-9 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-black hover:bg-red-500 transition-colors"
+    title={user.username}
+  >
+    {user.username.slice(0,2).toUpperCase()}
+  </button>
+) : (
+  <button
+    onClick={() => setShowAuth(true)}
+    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-lg transition-colors"
+  >
+    Sign In
+  </button>
+)}
 
           {/* LinkedIn in mobile menu */}
           <div className="border-t border-white/5 mt-3 pt-3 px-2">

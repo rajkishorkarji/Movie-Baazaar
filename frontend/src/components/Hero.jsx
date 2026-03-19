@@ -85,5 +85,4 @@ const Hero = ({ featuredMovie, onSearch }) => {
     </div>
   );
 };
-
 export default Hero;

@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getTrending, getPopular, getTopRated, getByGenre, searchMovies, getBollywood, getHollywood, getSouthIndian, getHindiDubbed, getWebSeries } from '../api';
 
@@ -16,7 +15,6 @@ const FETCH_MAP = {
 };
 
 const MovieCard = ({ movie }) => {
-  const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const img = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
@@ -44,9 +42,9 @@ const MovieCard = ({ movie }) => {
         )}
         <div className={`absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-0'}`}>
           <button
-    onClick={() => navigate(`/movie/${movie.id}`)}
-    className="bg-red-600 hover:bg-red-500 text-white text-sm px-5 py-2 rounded-lg font-bold transition-colors shadow-lg"
-      >
+  onClick={() => navigate(`/movie/${movie.id}`)}
+  className="bg-red-600 hover:bg-red-500 text-white text-sm px-5 py-2 rounded-lg font-bold transition-colors shadow-lg"
+>
   ▶ Watch
 </button>
         </div>

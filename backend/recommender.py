@@ -14,4 +14,3 @@ def get_recommendations(movie_id):
     except Exception as e:
         print(f"Recommendation failed: {e}")
         return []
-
