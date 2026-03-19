@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getTrending, getPopular, getTopRated, getByGenre, searchMovies, getBollywood, getHollywood, getSouthIndian, getHindiDubbed, getWebSeries } from '../api';
 
@@ -20,6 +21,8 @@ const MovieCard = ({ movie }) => {
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster';
   const rating = movie.vote_average || movie.rating;
+
+  const navigate = useNavigate();
 
   return (
     <div
