@@ -4,3 +4,6 @@ sqlalchemy
 psycopg2-binary
 python-dotenv
 requests
+bcrypt
+python-jose[cryptography]
+pydantic[email]
