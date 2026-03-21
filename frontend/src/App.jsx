@@ -47,78 +47,46 @@ function App() {
       case 'search':
         return (
           <>
-            <div className="px-6 md:px-10 pt-6 mb-2 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Results for <span className="text-red-400">"{searchQuery}"</span></h2>
-              <button onClick={() => handleCategorySelect('home')} className="text-gray-400 hover:text-white text-sm">✕ Clear</button>
+            <div className="px-4 md:px-10 pt-4 mb-2 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Results for <span className="text-red-400">"{searchQuery}"</span></h2>
+              <button onClick={() => handleCategorySelect('home')} className="text-gray-400 hover:text-white text-sm">X Clear</button>
             </div>
             <MovieRow title="" fetchType="search" fetchParam={searchQuery} />
           </>
         );
-
       case 'genre':
         return (
           <>
-            <div className="px-6 md:px-10 pt-6 mb-2 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white"><span className="text-red-400">{activeGenreName}</span> Movies</h2>
-              <button onClick={() => handleCategorySelect('home')} className="text-gray-400 hover:text-white text-sm">✕ Clear</button>
+            <div className="px-4 md:px-10 pt-4 mb-2 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white"><span className="text-red-400">{activeGenreName}</span> Movies</h2>
+              <button onClick={() => handleCategorySelect('home')} className="text-gray-400 hover:text-white text-sm">X Clear</button>
             </div>
             <MovieRow title="" fetchType="genre" fetchParam={activeGenreId} />
           </>
         );
-
       case 'Bollywood':
-        return (
-          <>
-            <MovieRow title="Bollywood Popular"     fetchType="bollywood" />
-  
-          </>
-        );
-
+        return <MovieRow title="Bollywood Popular" fetchType="bollywood" />;
       case 'Hollywood':
-        return (
-          <>
-            <MovieRow title="Hollywood Popular"     fetchType="hollywood" />
-           
-          </>
-        );
-
+        return <MovieRow title="Hollywood Popular" fetchType="hollywood" />;
       case 'Hindi Dubbed':
-        return (
-          <>
-            <MovieRow title="Hindi Dubbed Popular"  fetchType="hindiDubbed" />
-            
-          </>
-        );
-
+        return <MovieRow title="Hindi Dubbed Popular" fetchType="hindiDubbed" />;
       case 'South Indian':
-        return (
-          <>
-            <MovieRow title="South Indian Popular"  fetchType="southIndian" />
-           
-          </>
-        );
-
+        return <MovieRow title="South Indian Popular" fetchType="southIndian" />;
       case 'Web Series':
+        return <MovieRow title="Popular Web Series" fetchType="webSeries" />;
+      default:
         return (
           <>
-            <MovieRow title="Popular Web Series"    fetchType="webSeries" />
-           
+            <MovieRowScroll title="Trending This Week" fetchType="trending" />
+            <MovieRowScroll title="Top Rated"          fetchType="topRated" />
+            <MovieRowScroll title="Popular Now"        fetchType="popular" />
+            <MovieRowScroll title="Action"             fetchType="genre" fetchParam={28} />
+            <MovieRowScroll title="Comedy"             fetchType="genre" fetchParam={35} />
+            <MovieRowScroll title="Sci-Fi"             fetchType="genre" fetchParam={878} />
+            <MovieRowScroll title="Horror"             fetchType="genre" fetchParam={27} />
+            <MovieRowScroll title="Drama"              fetchType="genre" fetchParam={18} />
           </>
         );
-
-      default:
-  return (
-    <>
-      <MovieRowScroll title="Trending This Week"    fetchType="trending" />
-      <MovieRowScroll title="Top Rated"              fetchType="topRated" />
-      <MovieRowScroll title="Popular Now"            fetchType="popular" />
-      <MovieRowScroll title="Action"                 fetchType="genre" fetchParam={28} />
-      <MovieRowScroll title="Comedy"                 fetchType="genre" fetchParam={35} />
-      <MovieRowScroll title="Sci-Fi"                 fetchType="genre" fetchParam={878} />
-      <MovieRowScroll title="Horror"                 fetchType="genre" fetchParam={27} />
-      <MovieRowScroll title="Drama"                  fetchType="genre" fetchParam={18} />
-    </>
-  );
     }
   };
 
@@ -130,41 +98,22 @@ function App() {
         onCategorySelect={handleCategorySelect}
       />
       <Hero featuredMovie={featuredMovie} onSearch={handleSearch} />
-
-      <div className="relative z-20 -mt-32 pb-16">
+      <div className="relative z-20 pb-16">
         {renderRows()}
       </div>
-
-      <footer className="border-t border-gray-800/50 bg-[#0a0a0a] mt-10">
-        <div className="max-w-7xl mx-auto px-10 py-10">
-
-          {/* Top Row */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
-            
-            {/* Brand */}
-            <div className="flex items-center gap-3">
-              <img src="/logo.svg" alt="Movie Baazaar" className="h-14 w-auto"
-                onError={(e) => e.target.style.display='none'} />
-            </div>
-
-            {/* Connect Links */}
-            <div className="flex items-center gap-6 text-sm">
-              <a href="https://www.linkedin.com/in/rajkishor-karji-43456a2a9/" target="_blank" className="text-gray-500 hover:text-blue-400 transition-colors">LinkedIn</a>
+      <footer className="border-t border-gray-800/50 bg-[#0a0a0a] mt-6">
+        <div className="max-w-7xl mx-auto px-4 md:px-10 py-8 md:py-10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+            <img src="/logo.svg" alt="Movie Baazaar" className="h-10 md:h-14 w-auto" onError={(e) => e.target.style.display='none'} />
+            <div className="flex items-center gap-4 text-sm flex-wrap justify-center">
               <a href="https://github.com/rajkishorkarji" target="_blank" className="text-gray-500 hover:text-white transition-colors">GitHub</a>
               <a href="https://www.themoviedb.org" target="_blank" className="text-gray-500 hover:text-red-400 transition-colors">TMDB</a>
             </div>
           </div>
-
-          {/* Divider */}
-          <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-3">
-            <p className="text-gray-600 text-xs">
-              © {new Date().getFullYear()} Movie Baazaar. All rights reserved.
-            </p>
-            <p className="text-gray-700 text-xs">
-              Designed & Developed by <span className="text-gray-500">RAJKISHOR KARJI</span> · Powered by <span className="text-gray-500">TMDB API</span>
-            </p>
+          <div className="border-t border-gray-800 pt-4 flex flex-col md:flex-row justify-between items-center gap-2">
+            <p className="text-gray-600 text-xs text-center">© {new Date().getFullYear()} Movie Baazaar. All rights reserved.</p>
+            <p className="text-gray-700 text-xs text-center">Designed by RAJKISHOR KARJI · Powered by TMDB API</p>
           </div>
-
         </div>
       </footer>
     </div>
