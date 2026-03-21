@@ -83,8 +83,9 @@ function App() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
             <img src="/logo.svg" alt="Movie Baazaar" className="h-10 md:h-14 w-auto" onError={(e) => e.target.style.display='none'} />
             <div className="flex items-center gap-4 text-sm">
+              <a href = "https://www.linkedin.com/in/rajkishor-karji-43456a2a9/" target="_blank" className="text-gray-500 hover:text-white transition-colors">LinkedIn</a>
               <a href="https://github.com/rajkishorkarji" target="_blank" className="text-gray-500 hover:text-white transition-colors">GitHub</a>
-              <a href="https://www.themoviedb.org" target="_blank" className="text-gray-500 hover:text-red-400 transition-colors">TMDB</a>
+              <a href="https://www.themoviedb.org" target="_blank" className="text-gray-500 hover:text-white transition-colors">TMDB</a>
             </div>
           </div>
           <div className="border-t border-gray-800 pt-4 flex flex-col md:flex-row justify-between items-center gap-2">
