@@ -1,36 +1,29 @@
-import { useState, useEffect } from 'react';
-
-const Hero = ({ featuredMovie, onSearch }) => {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
+const Hero = ({ featuredMovie }) => {
   const backdropUrl = featuredMovie?.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${featuredMovie.backdrop_path}`
+    ? `https://image.tmdb.org/t/p/w1280${featuredMovie.backdrop_path}`
     : null;
 
   return (
-    <div className="relative w-full flex items-center justify-center overflow-hidden" style={{ height: '60vh', minHeight: '300px', maxHeight: '600px' }}>
+    <div
+      className="relative w-full flex items-center justify-center overflow-hidden"
+      style={{ height: '55vw', minHeight: '220px', maxHeight: '480px' }}
+    >
       {backdropUrl && (
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url('${backdropUrl}')` }}
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-[#0a0a0a]/30" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/80 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-[#0a0a0a]/20" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/70 via-transparent to-transparent" />
 
       <div className="relative z-10 px-4 flex flex-col justify-center items-center text-center w-full">
-        <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-full px-3 py-1 mb-3 backdrop-blur-sm">
+        <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-full px-3 py-1 mb-2 backdrop-blur-sm">
           <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
           <span className="text-red-400 text-xs font-semibold tracking-widest uppercase">Now Streaming</span>
         </div>
 
-        <h1 className="text-5xl sm:text-6xl md:text-8xl font-black text-white mb-2 tracking-tight leading-none">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white mb-2 tracking-tight leading-none">
           MOVIE
           <span className="block text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
             BAAZAAR
@@ -38,9 +31,9 @@ const Hero = ({ featuredMovie, onSearch }) => {
         </h1>
 
         {featuredMovie && (
-          <div className="mt-2">
+          <div className="mt-1">
             <p className="text-gray-300 text-xs tracking-widest uppercase mb-1">Featured Tonight</p>
-            <p className="text-white text-sm md:text-lg font-semibold line-clamp-1 px-4">
+            <p className="text-white text-sm md:text-base font-semibold line-clamp-1 px-4">
               {featuredMovie.title || featuredMovie.name}
             </p>
             {featuredMovie.vote_average > 0 && (
