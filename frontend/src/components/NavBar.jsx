@@ -207,17 +207,6 @@ const NavBar = ({ onSearch, onGenreSelect, onCategorySelect }) => {
               )}
             </div>
 
-            {/* LinkedIn — desktop only */}
-            <a
-              href="https://www.linkedin.com/in/rajkishor-karji-43456a2a9/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden md:flex w-9 h-9 rounded-lg bg-white/5 hover:bg-blue-500/20 border border-white/10 hover:border-blue-500/30 items-center justify-center text-gray-400 hover:text-blue-400 transition-all"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z" />
-              </svg>
-            </a>
 
             {/* Hamburger — mobile only */}
             <button
@@ -302,21 +291,6 @@ const NavBar = ({ onSearch, onGenreSelect, onCategorySelect }) => {
                   Sign In / Sign Up
                 </button>
               )}
-            </div>
-
-            {/* LinkedIn in mobile menu */}
-            <div className="border-t border-white/5 mt-3 pt-3 px-2">
-              <a
-                href="https://www.linkedin.com/in/rajkishor-karji-43456a2a9/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400 hover:text-blue-400 hover:bg-white/5 transition-all"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z" />
-                </svg>
-                LinkedIn
-              </a>
             </div>
           </div>
         )}
