@@ -8,22 +8,16 @@ import AuthModal from '../components/AuthModal';
 const TMDB_KEY  = '19752fb21d9c9448fe7e4ecfe88a7d8d';
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 
-const tmdbGet = async (path, params = {}) => {
-  const url = new URL(`${TMDB_BASE}${path}`);
-  url.searchParams.set('api_key', TMDB_KEY);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  // ✅ 20s timeout for slow mobile
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
-  try {
-    const r = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    return r.json();
-  } catch (e) {
-    clearTimeout(timer);
-    throw e;
-  }
-};
+API.get(`/movie/${id}`)
+  .then(r => {
+    const data = r.data;
+    if (data.status_code === 34) {
+      setError('Movie not found.');
+      return;
+    }
+    setMovie(data);
+    if (data.genres?.length) setGenreId(data.genres[0].id);
+  })
 
 const STREAMING = [
   {

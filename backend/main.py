@@ -339,20 +339,17 @@ def remove_history(
 @api.get("/trending")
 def get_trending():
     data = tmdb_get("/trending/movie/week")
-    return data.get("results", []) if data else []
-
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)} if data else {"results": [], "total_pages": 1}
 
 @api.get("/popular")
 def get_popular():
     data = tmdb_get("/movie/popular")
-    return data.get("results", []) if data else []
-
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)} if data else {"results": [], "total_pages": 1}
 
 @api.get("/top-rated")
 def get_top_rated():
     data = tmdb_get("/movie/top_rated")
-    return data.get("results", []) if data else []
-
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)} if data else {"results": [], "total_pages": 1}
 
 @api.get("/genre/{genre_id}")
 def get_by_genre(genre_id: int, page: int = 1):
@@ -361,20 +358,17 @@ def get_by_genre(genre_id: int, page: int = 1):
         "sort_by": "popularity.desc",
         "page": page,
     })
-    return data if data else {}
-
+    return data if data else {"results": [], "total_pages": 1}
 
 @api.get("/search")
 def search_movies(q: str = Query(..., min_length=1), page: int = 1):
     data = tmdb_get("/search/movie", {"query": q, "page": page})
-    return data if data else {}
-
+    return data if data else {"results": [], "total_pages": 1}
 
 @api.get("/recommend/{movie_id}")
 def get_recommendations(movie_id: int):
     data = tmdb_get(f"/movie/{movie_id}/recommendations")
-    return data.get("results", []) if data else []
-
+    return {"results": data.get("results", []), "total_pages": 1} if data else {"results": [], "total_pages": 1}
 
 @api.get("/movie/{movie_id}")
 def get_movie_detail(movie_id: int):
@@ -383,46 +377,28 @@ def get_movie_detail(movie_id: int):
         raise HTTPException(404, "Movie not found")
     return data
 
+# Add these new routes too:
 @api.get("/discover/bollywood")
 def get_bollywood(page: int = 1):
-        data = tmdb_get("/discover/movie", {
-        "with_original_language": "hi",
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
-        return data if data else {}
+    data = tmdb_get("/discover/movie", {"with_original_language": "hi", "sort_by": "popularity.desc", "page": page})
+    return data if data else {"results": [], "total_pages": 1}
 
 @api.get("/discover/hollywood")
 def get_hollywood(page: int = 1):
-    data = tmdb_get("/discover/movie", {
-        "with_original_language": "en",
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
-    return data if data else {}
+    data = tmdb_get("/discover/movie", {"with_original_language": "en", "sort_by": "popularity.desc", "page": page})
+    return data if data else {"results": [], "total_pages": 1}
 
 @api.get("/discover/south-indian")
 def get_south_indian(page: int = 1):
-    data = tmdb_get("/discover/movie", {
-        "with_original_language": "ta",
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
-    return data if data else {}
+    data = tmdb_get("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": page})
+    return data if data else {"results": [], "total_pages": 1}
 
 @api.get("/discover/hindi-dubbed")
 def get_hindi_dubbed(page: int = 1):
-    data = tmdb_get("/discover/movie", {
-        "with_original_language": "hi",
-        "sort_by": "vote_count.desc",
-        "page": page,
-    })
-    return data if data else {}
+    data = tmdb_get("/discover/movie", {"with_original_language": "hi", "sort_by": "vote_count.desc", "page": page})
+    return data if data else {"results": [], "total_pages": 1}
 
 @api.get("/discover/web-series")
 def get_web_series(page: int = 1):
-    data = tmdb_get("/discover/tv", {
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
-    return data if data else {}
+    data = tmdb_get("/discover/tv", {"sort_by": "popularity.desc", "page": page})
+    return data if data else {"results": [], "total_pages": 1}
