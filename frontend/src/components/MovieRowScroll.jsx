@@ -17,51 +17,40 @@ const FETCH_MAP = {
 };
 
 const MovieCard = ({ movie }) => {
-  const [hovered, setHovered] = useState(false);
   const navigate = useNavigate();
   const img = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster';
-
   const rating = movie.vote_average || movie.rating;
 
   return (
+    /* ✅ FIXED: smaller on mobile, larger on desktop */
     <div
-      className="flex-none w-40 md:w-48 cursor-pointer group"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="flex-none w-32 sm:w-36 md:w-44 cursor-pointer group"
+      onClick={() => navigate(`/movie/${movie.id}`)}
     >
-      {/* Poster */}
-      <div className="relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-black/70">
+      <div className="relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 active:scale-95 md:group-hover:-translate-y-1 md:group-hover:shadow-2xl md:group-hover:shadow-black/70">
         <img
-          className="w-full h-60 md:h-72 object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-48 sm:h-52 md:h-64 object-cover transition-transform duration-500 md:group-hover:scale-105"
           src={img}
           alt={movie.title || movie.name}
           loading="lazy"
         />
-
-        {/* Rating Badge */}
         {rating > 0 && (
           <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1">
             <span className="text-yellow-400 text-xs">★</span>
             <span className="text-white text-xs font-semibold">{Number(rating).toFixed(1)}</span>
           </div>
         )}
-
-        {/* Hover overlay */}
-        <div className={`absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-0'}`}>
-          <button
-            onClick={() => navigate(`/movie/${movie.id}`)}
-            className="bg-red-600 hover:bg-red-500 text-white text-sm px-5 py-2 rounded-lg font-bold transition-colors shadow-lg"
-          >
+        {/* Desktop hover overlay only */}
+        <div className="absolute inset-0 bg-black/60 hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <button className="bg-red-600 hover:bg-red-500 text-white text-sm px-5 py-2 rounded-lg font-bold transition-colors shadow-lg">
             ▶ Watch
           </button>
         </div>
       </div>
-
-      {/* Title below poster */}
       <div className="mt-2 px-0.5">
-        <p className="text-white text-xs font-semibold leading-snug line-clamp-3">
+        <p className="text-white text-xs font-semibold leading-snug line-clamp-2">
           {movie.title || movie.name}
         </p>
         {(movie.release_date || movie.first_air_date) && (
@@ -99,27 +88,34 @@ const MovieRowScroll = ({ title, fetchType, fetchParam }) => {
   };
 
   return (
-    <div className="mb-10 group/row">
-      <div className="flex items-center justify-between mb-4 px-6 md:px-10">
-        <h2 className="text-white text-lg font-bold flex items-center gap-3">
+    <div className="mb-8 md:mb-10">
+      <div className="flex items-center justify-between mb-3 md:mb-4 px-4 md:px-10">
+        <h2 className="text-white text-base md:text-lg font-bold flex items-center gap-3">
           <span className="w-1 h-5 bg-red-600 rounded-full" />{title}
         </h2>
       </div>
       <div className="relative">
+        {/* Arrow buttons — only show on desktop */}
         {canLeft && (
-          <button onClick={() => scroll(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 hover:bg-red-600 border border-gray-700 rounded-full flex items-center justify-center text-white text-xl transition-all">‹</button>
+          <button onClick={() => scroll(-1)} className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 hover:bg-red-600 border border-gray-700 rounded-full items-center justify-center text-white text-xl transition-all">‹</button>
         )}
         {canRight && !loading && movies.length > 0 && (
-          <button onClick={() => scroll(1)} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 hover:bg-red-600 border border-gray-700 rounded-full flex items-center justify-center text-white text-xl transition-all">›</button>
+          <button onClick={() => scroll(1)} className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 hover:bg-red-600 border border-gray-700 rounded-full items-center justify-center text-white text-xl transition-all">›</button>
         )}
-        <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-6 md:w-10 bg-gradient-to-r from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-6 md:w-10 bg-gradient-to-l from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
 
-        <div ref={ref} onScroll={onScroll} className="flex overflow-x-scroll scrollbar-hide gap-3 px-6 md:px-10 pb-2">
+        {/* ✅ FIXED: -webkit-overflow-scrolling for smooth iOS touch scroll */}
+        <div
+          ref={ref}
+          onScroll={onScroll}
+          className="flex overflow-x-scroll scrollbar-hide gap-2 md:gap-3 px-4 md:px-10 pb-2"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {loading
             ? [...Array(8)].map((_, i) => (
-                <div key={i} className="flex-none w-36 md:w-44">
-                  <div className="w-full h-52 md:h-64 bg-gray-800/60 animate-pulse rounded-lg" />
+                <div key={i} className="flex-none w-32 sm:w-36 md:w-44">
+                  <div className="w-full h-48 sm:h-52 md:h-64 bg-gray-800/60 animate-pulse rounded-lg" />
                   <div className="mt-2 h-3 bg-gray-800/40 animate-pulse rounded w-3/4" />
                 </div>
               ))
