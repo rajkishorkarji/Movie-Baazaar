@@ -382,3 +382,47 @@ def get_movie_detail(movie_id: int):
     if not data:
         raise HTTPException(404, "Movie not found")
     return data
+
+@api.get("/discover/bollywood")
+def get_bollywood(page: int = 1):
+        data = tmdb_get("/discover/movie", {
+        "with_original_language": "hi",
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+        return data if data else {}
+
+@api.get("/discover/hollywood")
+def get_hollywood(page: int = 1):
+    data = tmdb_get("/discover/movie", {
+        "with_original_language": "en",
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+    return data if data else {}
+
+@api.get("/discover/south-indian")
+def get_south_indian(page: int = 1):
+    data = tmdb_get("/discover/movie", {
+        "with_original_language": "ta",
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+    return data if data else {}
+
+@api.get("/discover/hindi-dubbed")
+def get_hindi_dubbed(page: int = 1):
+    data = tmdb_get("/discover/movie", {
+        "with_original_language": "hi",
+        "sort_by": "vote_count.desc",
+        "page": page,
+    })
+    return data if data else {}
+
+@api.get("/discover/web-series")
+def get_web_series(page: int = 1):
+    data = tmdb_get("/discover/tv", {
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+    return data if data else {}
