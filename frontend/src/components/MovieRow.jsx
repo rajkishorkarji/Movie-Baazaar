@@ -2,21 +2,24 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getTrending, getPopular, getTopRated, getByGenre, searchMovies, getBollywood, getHollywood, getSouthIndian, getHindiDubbed, getWebSeries } from '../api';
 
-const FETCH_MAP = {
-  trending:    (p, page) => getTrending(page),
-  popular:     (p, page) => getPopular(page),
-  topRated:    (p, page) => getTopRated(page),
-  genre:       (p, page) => getByGenre(p, page),
-  search:      (p, page) => searchMovies(p, page),
-  bollywood:   (p, page) => getBollywood(page),
-  hollywood:   (p, page) => getHollywood(page),
-  southIndian: (p, page) => getSouthIndian(page),
-  hindiDubbed: (p, page) => getHindiDubbed(page),
-  webSeries:   (p, page) => getWebSeries(page),
+const fetchData = (fetchType, fetchParam, page) => {
+  switch (fetchType) {
+    case 'trending':    return getTrending(page);
+    case 'popular':     return getPopular(page);
+    case 'topRated':    return getTopRated(page);
+    case 'genre':       return getByGenre(fetchParam, page);
+    case 'search':      return searchMovies(fetchParam, page);
+    case 'bollywood':   return getBollywood(page);
+    case 'hollywood':   return getHollywood(page);
+    case 'southIndian': return getSouthIndian(page);
+    case 'hindiDubbed': return getHindiDubbed(page);
+    case 'webSeries':   return getWebSeries(page);
+    default:            return Promise.reject(new Error('Unknown fetchType'));
+  }
 };
 
 const MovieCard = ({ movie }) => {
-  const [hovered, setHovered] = useState(false);
+  const [hovered, setHovered]   = useState(false);
   const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
 
@@ -46,7 +49,6 @@ const MovieCard = ({ movie }) => {
             <span className="text-white text-xs font-semibold">{Number(rating).toFixed(1)}</span>
           </div>
         )}
-        {/* Hover overlay — hidden on touch devices */}
         <div className={`absolute inset-0 bg-black/60 hidden md:flex items-center justify-center transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-0'}`}>
           <button className="bg-red-600 hover:bg-red-500 text-white text-sm px-5 py-2 rounded-lg font-bold transition-colors shadow-lg">
             ▶ Watch
@@ -90,9 +92,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className="px-3 py-2 rounded-lg text-sm font-medium bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-      >
-        ‹ Prev
-      </button>
+      >‹ Prev</button>
       {getPages().map((page, i) =>
         page === '...' ? (
           <span key={`dot-${i}`} className="px-2 py-2 text-gray-600 text-sm">...</span>
@@ -105,18 +105,14 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                 ? 'bg-red-600 border-red-600 text-white'
                 : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
             }`}
-          >
-            {page}
-          </button>
+          >{page}</button>
         )
       )}
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className="px-3 py-2 rounded-lg text-sm font-medium bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-      >
-        Next ›
-      </button>
+      >Next ›</button>
     </div>
   );
 };
@@ -132,30 +128,23 @@ const MovieRow = ({ title, fetchType, fetchParam }) => {
     setCurrentPage(1);
   }, [fetchType, fetchParam]);
 
-  const fetchMovies = () => {
-    const fn = FETCH_MAP[fetchType];
-    if (!fn) return;
+  useEffect(() => {
+    if (fetchType === 'genre' && !fetchParam) return;
+    if (fetchType === 'search' && !fetchParam) return;
+
     setLoading(true);
     setError(false);
-    fn(fetchParam, currentPage)
+
+    fetchData(fetchType, fetchParam, currentPage)
       .then(r => {
-        const results = r.data?.results || [];
-        setMovies(results);
+        setMovies(r.data?.results || []);
         setTotalPages(Math.min(r.data?.total_pages || 1, 500));
-        // ✅ If no results returned, don't treat as error
-        if (results.length === 0 && fetchType === 'search') {
-          setError(false);
-        }
       })
       .catch(e => {
-        console.error(title, e);
+        console.error('MovieRow error:', title, e);
         setError(true);
       })
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchMovies();
   }, [fetchType, fetchParam, currentPage]);
 
   const handlePageChange = (page) => {
@@ -186,17 +175,11 @@ const MovieRow = ({ title, fetchType, fetchParam }) => {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 py-12">
-            <p className="text-gray-500 text-sm">Failed to load. Check your internet connection.</p>
-            <button
-              onClick={fetchMovies}
-              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm rounded-lg transition-colors"
-            >
-              Try Again
-            </button>
+            <p className="text-gray-500 text-sm">Failed to load. Check your connection.</p>
           </div>
         ) : movies.length === 0 ? (
           <p className="text-gray-600 py-8 text-sm text-center">
-            {fetchType === 'search' ? 'No results found. Try a different search.' : 'No movies found.'}
+            {fetchType === 'search' ? 'No results found.' : 'No movies found.'}
           </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
@@ -205,11 +188,7 @@ const MovieRow = ({ title, fetchType, fetchParam }) => {
         )}
 
         {!loading && !error && totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         )}
       </div>
     </div>
