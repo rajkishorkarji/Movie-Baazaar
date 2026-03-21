@@ -25,7 +25,6 @@ API.interceptors.response.use(
 
 export default API;
 
-// ✅ All through your Render backend — no CORS issues on mobile
 export const getTrending        = (page = 1) => API.get('/trending', { params: { page } });
 export const getPopular         = (page = 1) => API.get('/popular', { params: { page } });
 export const getTopRated        = (page = 1) => API.get('/top-rated', { params: { page } });

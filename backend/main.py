@@ -18,7 +18,6 @@ load_dotenv()
 TMDB_KEY  = os.getenv("TMDB_API_KEY")
 TMDB_BASE = "https://api.themoviedb.org/3"
 
-# ── App setup ─────────────────────────────────────────────────────────────────
 api = FastAPI(title="Movie Baazaar API", version="2.0.0")
 
 @api.on_event("startup")
@@ -31,18 +30,17 @@ def startup():
 
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # lock down to your Vercel URL in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ── TMDB helper ───────────────────────────────────────────────────────────────
 def tmdb_get(path: str, params: dict = {}) -> Optional[dict]:
     params["api_key"] = TMDB_KEY
     try:
-        r = requests.get(f"{TMDB_BASE}{path}", params=params, timeout=8)
+        r = requests.get(f"{TMDB_BASE}{path}", params=params, timeout=10)
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -50,24 +48,19 @@ def tmdb_get(path: str, params: dict = {}) -> Optional[dict]:
         return None
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Health
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Health ────────────────────────────────────────────────────────────────────
 @api.get("/")
 def home():
     return {"status": "Movie Baazaar API v2 🎬"}
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Auth — Email / Password
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Auth ──────────────────────────────────────────────────────────────────────
 @api.post("/auth/email/register", response_model=schemas.TokenOut, status_code=201)
 def register(body: schemas.UserRegister, db: Session = Depends(database.get_db)):
     if db.query(models.User).filter(models.User.email == body.email).first():
         raise HTTPException(400, "Email already registered")
     if db.query(models.User).filter(models.User.username == body.username).first():
         raise HTTPException(400, "Username already taken")
-
     user = models.User(
         username=body.username,
         email=body.email,
@@ -76,8 +69,6 @@ def register(body: schemas.UserRegister, db: Session = Depends(database.get_db))
     db.add(user)
     db.commit()
     db.refresh(user)
-
-    # create_access_token now takes user_id directly (not a dict)
     token = auth.create_access_token(user.id)
     return {"access_token": token, "token_type": "bearer", "user": user}
 
@@ -87,7 +78,6 @@ def login(body: schemas.UserLogin, db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if not user or not auth.verify_password(body.password, user.hashed_password):
         raise HTTPException(401, "Invalid email or password")
-
     token = auth.create_access_token(user.id)
     return {"access_token": token, "token_type": "bearer", "user": user}
 
@@ -114,9 +104,7 @@ def update_me(
     return current_user
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Profile
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Profile ───────────────────────────────────────────────────────────────────
 @api.get("/profile", response_model=schemas.ProfileOut)
 def get_profile(
     db: Session = Depends(database.get_db),
@@ -144,9 +132,7 @@ def get_profile(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Ratings
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Ratings ───────────────────────────────────────────────────────────────────
 @api.post("/ratings", response_model=schemas.RatingOut)
 def rate_movie(
     body: schemas.RatingIn,
@@ -161,7 +147,6 @@ def rate_movie(
         db.commit()
         db.refresh(existing)
         return existing
-
     rating = models.Rating(
         user_id=current_user.id,
         tmdb_id=body.tmdb_id,
@@ -203,9 +188,7 @@ def delete_rating(
     db.commit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Comments
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Comments ──────────────────────────────────────────────────────────────────
 @api.post("/comments", response_model=schemas.CommentOut, status_code=201)
 def add_comment(
     body: schemas.CommentIn,
@@ -227,7 +210,7 @@ def add_comment(
         "created_at": comment.created_at,
         "username":   current_user.username,
         "avatar_url": current_user.avatar_url,
-        "is_mine":    True,             # always True for the person who just posted it
+        "is_mine":    True,
     }
 
 
@@ -273,16 +256,13 @@ def delete_comment(
     db.commit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Watch History
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Watch History ─────────────────────────────────────────────────────────────
 @api.post("/history", status_code=201)
 def add_to_history(
     body: schemas.HistoryIn,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    # Prevent duplicate entries within the last hour
     cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
     recent = (
         db.query(models.WatchHistory)
@@ -295,7 +275,6 @@ def add_to_history(
     )
     if recent:
         return {"status": "already_tracked"}
-
     entry = models.WatchHistory(
         user_id=current_user.id,
         tmdb_id=body.tmdb_id,
@@ -333,23 +312,30 @@ def remove_history(
     db.commit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TMDB Pass-through
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── TMDB Routes ───────────────────────────────────────────────────────────────
 @api.get("/trending")
-def get_trending():
-    data = tmdb_get("/trending/movie/week")
-    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)} if data else {"results": [], "total_pages": 1}
+def get_trending(page: int = 1):
+    data = tmdb_get("/trending/movie/week", {"page": page})
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/popular")
-def get_popular():
-    data = tmdb_get("/movie/popular")
-    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)} if data else {"results": [], "total_pages": 1}
+def get_popular(page: int = 1):
+    data = tmdb_get("/movie/popular", {"page": page})
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/top-rated")
-def get_top_rated():
-    data = tmdb_get("/movie/top_rated")
-    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)} if data else {"results": [], "total_pages": 1}
+def get_top_rated(page: int = 1):
+    data = tmdb_get("/movie/top_rated", {"page": page})
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/genre/{genre_id}")
 def get_by_genre(genre_id: int, page: int = 1):
@@ -358,17 +344,26 @@ def get_by_genre(genre_id: int, page: int = 1):
         "sort_by": "popularity.desc",
         "page": page,
     })
-    return data if data else {"results": [], "total_pages": 1}
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/search")
 def search_movies(q: str = Query(..., min_length=1), page: int = 1):
     data = tmdb_get("/search/movie", {"query": q, "page": page})
-    return data if data else {"results": [], "total_pages": 1}
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/recommend/{movie_id}")
 def get_recommendations(movie_id: int):
     data = tmdb_get(f"/movie/{movie_id}/recommendations")
-    return {"results": data.get("results", []), "total_pages": 1} if data else {"results": [], "total_pages": 1}
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": 1}
+
 
 @api.get("/movie/{movie_id}")
 def get_movie_detail(movie_id: int):
@@ -377,28 +372,61 @@ def get_movie_detail(movie_id: int):
         raise HTTPException(404, "Movie not found")
     return data
 
-# Add these new routes too:
+
 @api.get("/discover/bollywood")
 def get_bollywood(page: int = 1):
-    data = tmdb_get("/discover/movie", {"with_original_language": "hi", "sort_by": "popularity.desc", "page": page})
-    return data if data else {"results": [], "total_pages": 1}
+    data = tmdb_get("/discover/movie", {
+        "with_original_language": "hi",
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/discover/hollywood")
 def get_hollywood(page: int = 1):
-    data = tmdb_get("/discover/movie", {"with_original_language": "en", "sort_by": "popularity.desc", "page": page})
-    return data if data else {"results": [], "total_pages": 1}
+    data = tmdb_get("/discover/movie", {
+        "with_original_language": "en",
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/discover/south-indian")
 def get_south_indian(page: int = 1):
-    data = tmdb_get("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": page})
-    return data if data else {"results": [], "total_pages": 1}
+    data = tmdb_get("/discover/movie", {
+        "with_original_language": "ta",
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/discover/hindi-dubbed")
 def get_hindi_dubbed(page: int = 1):
-    data = tmdb_get("/discover/movie", {"with_original_language": "hi", "sort_by": "vote_count.desc", "page": page})
-    return data if data else {"results": [], "total_pages": 1}
+    data = tmdb_get("/discover/movie", {
+        "with_original_language": "hi",
+        "sort_by": "vote_count.desc",
+        "page": page,
+    })
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
 
 @api.get("/discover/web-series")
 def get_web_series(page: int = 1):
-    data = tmdb_get("/discover/tv", {"sort_by": "popularity.desc", "page": page})
-    return data if data else {"results": [], "total_pages": 1}
+    data = tmdb_get("/discover/tv", {
+        "sort_by": "popularity.desc",
+        "page": page,
+    })
+    if not data:
+        return {"results": [], "total_pages": 1}
+    return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
