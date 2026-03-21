@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MovieRowScroll from '../components/MovieRowScroll';
 import { useAuth } from '../context/AuthContext';
@@ -12,8 +12,17 @@ const tmdbGet = async (path, params = {}) => {
   const url = new URL(`${TMDB_BASE}${path}`);
   url.searchParams.set('api_key', TMDB_KEY);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const r = await fetch(url);
-  return r.json();
+  // ✅ 20s timeout for slow mobile
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return r.json();
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
 };
 
 const STREAMING = [
@@ -119,32 +128,56 @@ const MovieDetail = () => {
 
   const [movie, setMovie]             = useState(null);
   const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
   const [genreId, setGenreId]         = useState(null);
   const [showAuth, setShowAuth]       = useState(false);
   const [ratings, setRatings]         = useState({ average: null, count: 0, user_score: null });
   const [comments, setComments]       = useState([]);
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting]   = useState(false);
+  const [ratingLoading, setRatingLoading] = useState(false);
+
+  // ✅ Load ratings with proper auth header attached
+  const loadRatings = useCallback(async () => {
+    try {
+      const r = await API.get(`/ratings/${id}`);
+      setRatings(r.data);
+    } catch (e) {
+      console.error('Ratings load error:', e);
+    }
+  }, [id]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setLoading(true);
+    setError(null);
     tmdbGet(`/movie/${id}`, { append_to_response: 'credits,videos' })
       .then(data => {
+        if (data.status_code === 34) {
+          setError('Movie not found.');
+          return;
+        }
         setMovie(data);
         if (data.genres?.length) setGenreId(data.genres[0].id);
+      })
+      .catch(e => {
+        console.error('Movie load error:', e);
+        setError('Failed to load movie. Check your internet connection.');
       })
       .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => {
     if (!id) return;
-    API.get(`/ratings/${id}`).then(r => setRatings(r.data)).catch(() => {});
+    loadRatings();
     API.get(`/comments/${id}`).then(r => setComments(r.data)).catch(() => {});
-  }, [id]);
+  }, [id, loadRatings]);
 
+  // ✅ Track watch history only when user is logged in
   useEffect(() => {
     if (!movie || !user) return;
+    const token = localStorage.getItem('mb_token');
+    if (!token) return;
     API.post('/history', {
       tmdb_id:     movie.id,
       movie_title: movie.title,
@@ -152,26 +185,52 @@ const MovieDetail = () => {
     }).catch(() => {});
   }, [movie, user]);
 
+  // ✅ FIXED: Rating handler — ensures auth header is set before calling
   const handleRate = async (score) => {
     if (!user) { setShowAuth(true); return; }
+
+    const token = localStorage.getItem('mb_token');
+    if (!token) { setShowAuth(true); return; }
+
+    // Ensure header is set (defensive)
+    API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    setRatingLoading(true);
     try {
       await API.post('/ratings', { tmdb_id: Number(id), score });
-      const r = await API.get(`/ratings/${id}`);
-      setRatings(r.data);
-    } catch (e) { console.error('Rating error:', e); }
+      // Reload ratings to get updated average
+      await loadRatings();
+    } catch (e) {
+      console.error('Rating error:', e);
+      if (e.response?.status === 401) {
+        setShowAuth(true);
+      } else {
+        alert('Failed to save rating. Please try again.');
+      }
+    } finally {
+      setRatingLoading(false);
+    }
   };
 
   const handleComment = async (e) => {
     e.preventDefault();
     if (!user) { setShowAuth(true); return; }
     if (!commentText.trim()) return;
+
+    const token = localStorage.getItem('mb_token');
+    if (token) API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
     setSubmitting(true);
     try {
       const r = await API.post('/comments', { tmdb_id: Number(id), body: commentText.trim() });
       setComments(prev => [r.data, ...prev]);
       setCommentText('');
-    } catch (e) { console.error('Comment error:', e); }
-    finally { setSubmitting(false); }
+    } catch (e) {
+      console.error('Comment error:', e);
+      if (e.response?.status === 401) setShowAuth(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDeleteComment = async (commentId) => {
@@ -190,14 +249,20 @@ const MovieDetail = () => {
     </div>
   );
 
-  if (!movie) return (
-    <div className="bg-[#0a0a0a] min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">Movie not found.</p>
+  if (error || !movie) return (
+    <div className="bg-[#0a0a0a] min-h-screen flex flex-col items-center justify-center gap-4">
+      <p className="text-gray-500 text-sm">{error || 'Movie not found.'}</p>
+      <button
+        onClick={() => navigate(-1)}
+        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
+      >
+        ← Go Back
+      </button>
     </div>
   );
 
   const backdrop = movie.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+    ? `https://image.tmdb.org/t/p/w780${movie.backdrop_path}`
     : null;
   const poster = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
@@ -222,27 +287,32 @@ const MovieDetail = () => {
         ← Back
       </button>
 
-      {/* ✅ FIXED: shorter backdrop on mobile */}
-      <div className="relative w-full h-[40vh] md:h-[55vh] overflow-hidden">
+      {/* Backdrop */}
+      <div className="relative w-full h-[40vh] md:h-[55vh] overflow-hidden bg-[#111]">
         {backdrop && (
-          <img src={backdrop} alt={movie.title} className="w-full h-full object-cover" />
+          <img
+            src={backdrop}
+            alt={movie.title}
+            className="w-full h-full object-cover"
+            loading="eager"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/80 to-transparent" />
       </div>
 
-      {/* ✅ FIXED: less negative margin on mobile */}
       <div className="max-w-6xl mx-auto px-4 md:px-10 -mt-32 md:-mt-48 relative z-10">
 
-        {/* ✅ FIXED: stacked on mobile, side by side on desktop */}
         <div className="flex flex-col md:flex-row gap-5 md:gap-8">
 
-          {/* Poster — centered and smaller on mobile */}
+          {/* Poster */}
           <div className="flex-none flex md:block justify-center">
             <img
               src={poster}
               alt={movie.title}
               className="w-36 md:w-64 rounded-xl shadow-2xl shadow-black/70 border border-white/5"
+              onError={(e) => { e.target.src = 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster'; }}
             />
           </div>
 
@@ -293,9 +363,12 @@ const MovieDetail = () => {
               {movie.overview}
             </p>
 
-            {/* Your Rating */}
+            {/* ✅ Your Rating — shows loading state while saving */}
             <div className="mb-4 md:mb-6">
-              <p className="text-gray-500 text-xs uppercase tracking-widest mb-2">Your Rating</p>
+              <p className="text-gray-500 text-xs uppercase tracking-widest mb-2">
+                Your Rating
+                {ratingLoading && <span className="ml-2 text-gray-600">Saving...</span>}
+              </p>
               <StarRating score={ratings.user_score} onRate={handleRate} />
               {!user && (
                 <button
@@ -307,7 +380,7 @@ const MovieDetail = () => {
               )}
             </div>
 
-            {/* ✅ FIXED: streaming buttons wrap nicely on mobile */}
+            {/* Streaming buttons */}
             <div className="mb-4 md:mb-6">
               <p className="text-gray-500 text-xs uppercase tracking-widest mb-2 md:mb-3">Watch On</p>
               <div className="flex flex-wrap gap-2">
@@ -356,6 +429,7 @@ const MovieDetail = () => {
                       : 'https://via.placeholder.com/100x150/1a1a1a/555?text=?'}
                     alt={actor.name}
                     className="w-14 h-14 md:w-20 md:h-20 rounded-full object-cover mx-auto border-2 border-white/10 mb-1 md:mb-2"
+                    onError={(e) => { e.target.src = 'https://via.placeholder.com/100x150/1a1a1a/555?text=?'; }}
                   />
                   <p className="text-white text-xs font-semibold line-clamp-2 leading-tight">
                     {actor.name}

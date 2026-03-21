@@ -14,11 +14,11 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
       return;
     }
-    // Token already set on axios by api.js on import — just verify it's still valid
+    // ✅ Always ensure header is set before verifying
+    API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     API.get('/auth/me')
       .then(r => setUser(r.data))
       .catch(() => {
-        // Token expired or invalid — clear it
         localStorage.removeItem('mb_token');
         delete API.defaults.headers.common['Authorization'];
       })
@@ -28,33 +28,27 @@ export const AuthProvider = ({ children }) => {
   // ── Shared helper: save token + set axios header ──────────────────────────
   const _applyToken = (token, userData) => {
     localStorage.setItem('mb_token', token);
+    // ✅ Set BOTH default header AND instance header to be safe
     API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
   };
 
-  // ── Email register ────────────────────────────────────────────────────────
-  // Route: POST /auth/email/register
-  // Response includes { access_token, user } — no second /auth/me call needed
   const emailRegister = async (username, email, password) => {
     const r = await API.post('/auth/email/register', { username, email, password });
     _applyToken(r.data.access_token, r.data.user);
   };
 
-  // ── Email login ───────────────────────────────────────────────────────────
-  // Route: POST /auth/email/login
   const emailLogin = async (email, password) => {
     const r = await API.post('/auth/email/login', { email, password });
     _applyToken(r.data.access_token, r.data.user);
   };
 
-  // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     localStorage.removeItem('mb_token');
     delete API.defaults.headers.common['Authorization'];
     setUser(null);
   }, []);
 
-  // ── Refresh user (called after profile edit) ──────────────────────────────
   const refreshUser = async () => {
     const r = await API.get('/auth/me');
     setUser(r.data);

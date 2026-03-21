@@ -18,13 +18,15 @@ const FETCH_MAP = {
 
 const MovieCard = ({ movie }) => {
   const navigate = useNavigate();
-  const img = movie.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+  const [imgError, setImgError] = useState(false);
+
+  // ✅ Use w342 (smaller) instead of w500 — much faster on mobile
+  const img = (!imgError && movie.poster_path)
+    ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
     : 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster';
   const rating = movie.vote_average || movie.rating;
 
   return (
-    /* ✅ FIXED: smaller on mobile, larger on desktop */
     <div
       className="flex-none w-32 sm:w-36 md:w-44 cursor-pointer group"
       onClick={() => navigate(`/movie/${movie.id}`)}
@@ -35,6 +37,7 @@ const MovieCard = ({ movie }) => {
           src={img}
           alt={movie.title || movie.name}
           loading="lazy"
+          onError={() => setImgError(true)}
         />
         {rating > 0 && (
           <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1">
@@ -66,18 +69,27 @@ const MovieCard = ({ movie }) => {
 const MovieRowScroll = ({ title, fetchType, fetchParam }) => {
   const [movies, setMovies]     = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(false);
   const [canLeft, setCanLeft]   = useState(false);
   const [canRight, setCanRight] = useState(true);
   const ref = useRef(null);
 
-  useEffect(() => {
+  const fetchMovies = () => {
     const fn = FETCH_MAP[fetchType];
     if (!fn) return;
     setLoading(true);
+    setError(false);
     fn(fetchParam)
       .then(r => setMovies(r.data?.results || []))
-      .catch(e => console.error(title, e))
+      .catch(e => {
+        console.error(title, e);
+        setError(true);
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMovies();
   }, [fetchType, fetchParam]);
 
   const scroll = (d) => ref.current?.scrollBy({ left: d * 400, behavior: 'smooth' });
@@ -105,24 +117,34 @@ const MovieRowScroll = ({ title, fetchType, fetchParam }) => {
         <div className="absolute left-0 top-0 bottom-0 w-6 md:w-10 bg-gradient-to-r from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-6 md:w-10 bg-gradient-to-l from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
 
-        {/* ✅ FIXED: -webkit-overflow-scrolling for smooth iOS touch scroll */}
         <div
           ref={ref}
           onScroll={onScroll}
           className="flex overflow-x-scroll scrollbar-hide gap-2 md:gap-3 px-4 md:px-10 pb-2"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          {loading
-            ? [...Array(8)].map((_, i) => (
-                <div key={i} className="flex-none w-32 sm:w-36 md:w-44">
-                  <div className="w-full h-48 sm:h-52 md:h-64 bg-gray-800/60 animate-pulse rounded-lg" />
-                  <div className="mt-2 h-3 bg-gray-800/40 animate-pulse rounded w-3/4" />
-                </div>
-              ))
-            : movies.length === 0
-              ? <p className="text-gray-600 py-8 text-sm">No movies found.</p>
-              : movies.map(m => <MovieCard key={m.id} movie={m} />)
-          }
+          {loading ? (
+            [...Array(8)].map((_, i) => (
+              <div key={i} className="flex-none w-32 sm:w-36 md:w-44">
+                <div className="w-full h-48 sm:h-52 md:h-64 bg-gray-800/60 animate-pulse rounded-lg" />
+                <div className="mt-2 h-3 bg-gray-800/40 animate-pulse rounded w-3/4" />
+              </div>
+            ))
+          ) : error ? (
+            <div className="flex items-center gap-3 py-8 px-2">
+              <p className="text-gray-600 text-sm">Failed to load.</p>
+              <button
+                onClick={fetchMovies}
+                className="text-xs text-red-500 hover:text-red-400 border border-red-500/30 px-2 py-1 rounded"
+              >
+                Retry
+              </button>
+            </div>
+          ) : movies.length === 0 ? (
+            <p className="text-gray-600 py-8 text-sm">No movies found.</p>
+          ) : (
+            movies.map(m => <MovieCard key={m.id} movie={m} />)
+          )}
         </div>
       </div>
     </div>

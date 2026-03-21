@@ -17,9 +17,11 @@ const FETCH_MAP = {
 
 const MovieCard = ({ movie }) => {
   const [hovered, setHovered] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
-  const img = movie.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+
+  const img = (!imgError && movie.poster_path)
+    ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
     : 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster';
   const rating = movie.vote_average || movie.rating;
 
@@ -36,6 +38,7 @@ const MovieCard = ({ movie }) => {
           src={img}
           alt={movie.title || movie.name}
           loading="lazy"
+          onError={() => setImgError(true)}
         />
         {rating > 0 && (
           <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1">
@@ -43,7 +46,7 @@ const MovieCard = ({ movie }) => {
             <span className="text-white text-xs font-semibold">{Number(rating).toFixed(1)}</span>
           </div>
         )}
-        {/* Hover overlay — hidden on touch devices, shown on hover for desktop */}
+        {/* Hover overlay — hidden on touch devices */}
         <div className={`absolute inset-0 bg-black/60 hidden md:flex items-center justify-center transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-0'}`}>
           <button className="bg-red-600 hover:bg-red-500 text-white text-sm px-5 py-2 rounded-lg font-bold transition-colors shadow-lg">
             ▶ Watch
@@ -121,6 +124,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 const MovieRow = ({ title, fetchType, fetchParam }) => {
   const [movies, setMovies]           = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages]   = useState(1);
 
@@ -128,17 +132,30 @@ const MovieRow = ({ title, fetchType, fetchParam }) => {
     setCurrentPage(1);
   }, [fetchType, fetchParam]);
 
-  useEffect(() => {
+  const fetchMovies = () => {
     const fn = FETCH_MAP[fetchType];
     if (!fn) return;
     setLoading(true);
+    setError(false);
     fn(fetchParam, currentPage)
       .then(r => {
-        setMovies(r.data?.results || []);
+        const results = r.data?.results || [];
+        setMovies(results);
         setTotalPages(Math.min(r.data?.total_pages || 1, 500));
+        // ✅ If no results returned, don't treat as error
+        if (results.length === 0 && fetchType === 'search') {
+          setError(false);
+        }
       })
-      .catch(e => console.error(title, e))
+      .catch(e => {
+        console.error(title, e);
+        setError(true);
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMovies();
   }, [fetchType, fetchParam, currentPage]);
 
   const handlePageChange = (page) => {
@@ -159,7 +176,6 @@ const MovieRow = ({ title, fetchType, fetchParam }) => {
 
       <div className="px-4 md:px-10">
         {loading ? (
-          /* ✅ FIXED: responsive skeleton grid */
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
             {[...Array(10)].map((_, i) => (
               <div key={i}>
@@ -168,16 +184,27 @@ const MovieRow = ({ title, fetchType, fetchParam }) => {
               </div>
             ))}
           </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 py-12">
+            <p className="text-gray-500 text-sm">Failed to load. Check your internet connection.</p>
+            <button
+              onClick={fetchMovies}
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm rounded-lg transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         ) : movies.length === 0 ? (
-          <p className="text-gray-600 py-8 text-sm">No movies found.</p>
+          <p className="text-gray-600 py-8 text-sm text-center">
+            {fetchType === 'search' ? 'No results found. Try a different search.' : 'No movies found.'}
+          </p>
         ) : (
-          /* ✅ FIXED: responsive grid — 2 cols on mobile, 3 on tablet, 4 on md, 5 on lg */
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
             {movies.map(m => <MovieCard key={m.id} movie={m} />)}
           </div>
         )}
 
-        {!loading && totalPages > 1 && (
+        {!loading && !error && totalPages > 1 && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

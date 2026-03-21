@@ -1,6 +1,7 @@
 const Hero = ({ featuredMovie }) => {
+  // w780 loads fast on mobile, still looks good on desktop
   const backdropUrl = featuredMovie?.backdrop_path
-    ? `https://image.tmdb.org/t/p/w1280${featuredMovie.backdrop_path}`
+    ? `https://image.tmdb.org/t/p/w780${featuredMovie.backdrop_path}`
     : null;
 
   return (
@@ -8,12 +9,21 @@ const Hero = ({ featuredMovie }) => {
       className="relative w-full flex items-center justify-center overflow-hidden"
       style={{ height: '55vw', minHeight: '220px', maxHeight: '480px' }}
     >
+      {/* Always-visible dark fallback */}
+      <div className="absolute inset-0 bg-[#1a0505]" />
+
+      {/* ✅ Use <img> NOT background-image — loads faster on mobile */}
       {backdropUrl && (
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('${backdropUrl}')` }}
+        <img
+          src={backdropUrl}
+          alt={featuredMovie?.title || 'Featured movie'}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
+          decoding="async"
+          onError={(e) => { e.target.style.display = 'none'; }}
         />
       )}
+
       <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-[#0a0a0a]/20" />
       <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/70 via-transparent to-transparent" />
 

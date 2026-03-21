@@ -2,9 +2,10 @@ import axios from 'axios';
 
 const TMDB_KEY = '19752fb21d9c9448fe7e4ecfe88a7d8d';
 
+// ✅ Increased timeout to 20s for slow mobile networks
 const TMDB = axios.create({
   baseURL: 'https://api.themoviedb.org/3',
-  timeout: 10000,
+  timeout: 20000,
   params: { api_key: TMDB_KEY },
 });
 
@@ -13,7 +14,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const API = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 20000,
 });
 
 // Restore token on page load
@@ -21,6 +22,18 @@ const savedToken = localStorage.getItem('mb_token');
 if (savedToken) {
   API.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
 }
+
+// ✅ Add response interceptor to handle token expiry
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('mb_token');
+      delete API.defaults.headers.common['Authorization'];
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default API;
 
