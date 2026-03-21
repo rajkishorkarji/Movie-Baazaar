@@ -1,5 +1,4 @@
-const Hero = ({ featuredMovie }) => {
-  // w780 loads fast on mobile, still looks good on desktop
+const Hero = ({ featuredMovie, waking }) => {
   const backdropUrl = featuredMovie?.backdrop_path
     ? `https://image.tmdb.org/t/p/w780${featuredMovie.backdrop_path}`
     : null;
@@ -12,7 +11,6 @@ const Hero = ({ featuredMovie }) => {
       {/* Always-visible dark fallback */}
       <div className="absolute inset-0 bg-[#1a0505]" />
 
-      {/* ✅ Use <img> NOT background-image — loads faster on mobile */}
       {backdropUrl && (
         <img
           src={backdropUrl}
@@ -28,10 +26,20 @@ const Hero = ({ featuredMovie }) => {
       <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/70 via-transparent to-transparent" />
 
       <div className="relative z-10 px-4 flex flex-col justify-center items-center text-center w-full">
-        <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-full px-3 py-1 mb-2 backdrop-blur-sm">
-          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-          <span className="text-red-400 text-xs font-semibold tracking-widest uppercase">Now Streaming</span>
-        </div>
+        {/* ✅ Show waking message if backend is starting up */}
+        {waking && (
+          <div className="inline-flex items-center gap-2 bg-yellow-600/20 border border-yellow-500/30 rounded-full px-3 py-1 mb-2 backdrop-blur-sm">
+            <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+            <span className="text-yellow-400 text-xs font-semibold tracking-widest uppercase">Starting server...</span>
+          </div>
+        )}
+
+        {!waking && (
+          <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-full px-3 py-1 mb-2 backdrop-blur-sm">
+            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-red-400 text-xs font-semibold tracking-widest uppercase">Now Streaming</span>
+          </div>
+        )}
 
         <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white mb-2 tracking-tight leading-none">
           MOVIE

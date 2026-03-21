@@ -37,21 +37,28 @@ api.add_middleware(
 )
 
 
+# ✅ Increased timeout to 15s so Render has time to call TMDB
 def tmdb_get(path: str, params: dict = {}) -> Optional[dict]:
-    params["api_key"] = TMDB_KEY
+    p = dict(params)
+    p["api_key"] = TMDB_KEY
     try:
-        r = requests.get(f"{TMDB_BASE}{path}", params=params, timeout=10)
+        r = requests.get(f"{TMDB_BASE}{path}", params=p, timeout=15)
         r.raise_for_status()
         return r.json()
     except Exception as e:
-        print(f"TMDB Error: {e}")
+        print(f"TMDB Error on {path}: {e}")
         return None
 
 
-# ── Health ────────────────────────────────────────────────────────────────────
+# ── Health / Keep-alive ───────────────────────────────────────────────────────
 @api.get("/")
 def home():
     return {"status": "Movie Baazaar API v2 🎬"}
+
+# ✅ Ping endpoint — call this to wake up Render before user visits
+@api.get("/ping")
+def ping():
+    return {"pong": True}
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
