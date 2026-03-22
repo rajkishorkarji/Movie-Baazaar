@@ -128,7 +128,6 @@ class ProfileOut(BaseModel):
     user:           UserOut
     ratings_count:  int
     comments_count: int
-    history_count:  int
     recent_ratings: List[RatingOut]
 
 
