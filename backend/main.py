@@ -42,7 +42,6 @@ api.add_middleware(
 )
 
 
-# ✅ Increased timeout to 15s so Render has time to call TMDB
 def tmdb_get(path: str, params: dict = {}) -> Optional[dict]:
     p = dict(params)
     p["api_key"] = TMDB_KEY
@@ -55,12 +54,11 @@ def tmdb_get(path: str, params: dict = {}) -> Optional[dict]:
         return None
 
 
-# ── Health / Keep-alive ───────────────────────────────────────────────────────
+# ── Health ────────────────────────────────────────────────────────────────────
 @api.get("/")
 def home():
     return {"status": "Movie Baazaar API v2 🎬"}
 
-# ✅ Ping endpoint — call this to wake up Render before user visits
 @api.get("/ping")
 def ping():
     return {"pong": True}
@@ -200,6 +198,33 @@ def delete_rating(
     db.commit()
 
 
+# ── My Ratings with movie info ────────────────────────────────────────────────
+@api.get("/my-ratings")
+def get_my_ratings(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    ratings = (
+        db.query(models.Rating)
+        .filter_by(user_id=current_user.id)
+        .order_by(models.Rating.updated_at.desc())
+        .all()
+    )
+    result = []
+    for r in ratings:
+        movie_info = tmdb_get(f"/movie/{r.tmdb_id}")
+        result.append({
+            "id":          r.id,
+            "tmdb_id":     r.tmdb_id,
+            "score":       r.score,
+            "created_at":  r.created_at,
+            "updated_at":  r.updated_at,
+            "movie_title": movie_info.get("title", f"Movie #{r.tmdb_id}") if movie_info else f"Movie #{r.tmdb_id}",
+            "poster_path": movie_info.get("poster_path") if movie_info else None,
+        })
+    return result
+
+
 # ── Comments ──────────────────────────────────────────────────────────────────
 @api.post("/comments", response_model=schemas.CommentOut, status_code=201)
 def add_comment(
@@ -268,6 +293,32 @@ def delete_comment(
     db.commit()
 
 
+# ── My Reviews with movie info ────────────────────────────────────────────────
+@api.get("/my-reviews")
+def get_my_reviews(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    comments = (
+        db.query(models.Comment)
+        .filter_by(user_id=current_user.id)
+        .order_by(models.Comment.created_at.desc())
+        .all()
+    )
+    result = []
+    for c in comments:
+        movie_info = tmdb_get(f"/movie/{c.tmdb_id}")
+        result.append({
+            "id":          c.id,
+            "tmdb_id":     c.tmdb_id,
+            "body":        c.body,
+            "created_at":  c.created_at,
+            "movie_title": movie_info.get("title", f"Movie #{c.tmdb_id}") if movie_info else f"Movie #{c.tmdb_id}",
+            "poster_path": movie_info.get("poster_path") if movie_info else None,
+        })
+    return result
+
+
 # ── Watch History ─────────────────────────────────────────────────────────────
 @api.post("/history", status_code=201)
 def add_to_history(
@@ -321,6 +372,61 @@ def remove_history(
     db.query(models.WatchHistory).filter_by(
         user_id=current_user.id, tmdb_id=tmdb_id
     ).delete()
+    db.commit()
+
+
+# ── Search History ────────────────────────────────────────────────────────────
+@api.post("/search-history", status_code=201)
+def add_search_history(
+    body: schemas.SearchHistoryIn,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    existing = db.query(models.SearchHistory).filter_by(
+        user_id=current_user.id, query=body.query
+    ).first()
+    if existing:
+        existing.searched_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"status": "updated"}
+    entry = models.SearchHistory(user_id=current_user.id, query=body.query)
+    db.add(entry)
+    db.commit()
+    return {"status": "saved"}
+
+
+@api.get("/search-history")
+def get_search_history(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    return (
+        db.query(models.SearchHistory)
+        .filter_by(user_id=current_user.id)
+        .order_by(models.SearchHistory.searched_at.desc())
+        .limit(20)
+        .all()
+    )
+
+
+@api.delete("/search-history/{query_id}", status_code=204)
+def delete_search_history(
+    query_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db.query(models.SearchHistory).filter_by(
+        id=query_id, user_id=current_user.id
+    ).delete()
+    db.commit()
+
+
+@api.delete("/search-history", status_code=204)
+def clear_search_history(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db.query(models.SearchHistory).filter_by(user_id=current_user.id).delete()
     db.commit()
 
 
@@ -387,11 +493,7 @@ def get_movie_detail(movie_id: int):
 
 @api.get("/discover/bollywood")
 def get_bollywood(page: int = 1):
-    data = tmdb_get("/discover/movie", {
-        "with_original_language": "hi",
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
+    data = tmdb_get("/discover/movie", {"with_original_language": "hi", "sort_by": "popularity.desc", "page": page})
     if not data:
         return {"results": [], "total_pages": 1}
     return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
@@ -399,11 +501,7 @@ def get_bollywood(page: int = 1):
 
 @api.get("/discover/hollywood")
 def get_hollywood(page: int = 1):
-    data = tmdb_get("/discover/movie", {
-        "with_original_language": "en",
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
+    data = tmdb_get("/discover/movie", {"with_original_language": "en", "sort_by": "popularity.desc", "page": page})
     if not data:
         return {"results": [], "total_pages": 1}
     return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
@@ -411,11 +509,7 @@ def get_hollywood(page: int = 1):
 
 @api.get("/discover/south-indian")
 def get_south_indian(page: int = 1):
-    data = tmdb_get("/discover/movie", {
-        "with_original_language": "ta",
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
+    data = tmdb_get("/discover/movie", {"with_original_language": "ta", "sort_by": "popularity.desc", "page": page})
     if not data:
         return {"results": [], "total_pages": 1}
     return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
@@ -423,11 +517,7 @@ def get_south_indian(page: int = 1):
 
 @api.get("/discover/hindi-dubbed")
 def get_hindi_dubbed(page: int = 1):
-    data = tmdb_get("/discover/movie", {
-        "with_original_language": "hi",
-        "sort_by": "vote_count.desc",
-        "page": page,
-    })
+    data = tmdb_get("/discover/movie", {"with_original_language": "hi", "sort_by": "vote_count.desc", "page": page})
     if not data:
         return {"results": [], "total_pages": 1}
     return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
@@ -435,69 +525,7 @@ def get_hindi_dubbed(page: int = 1):
 
 @api.get("/discover/web-series")
 def get_web_series(page: int = 1):
-    data = tmdb_get("/discover/tv", {
-        "sort_by": "popularity.desc",
-        "page": page,
-    })
+    data = tmdb_get("/discover/tv", {"sort_by": "popularity.desc", "page": page})
     if not data:
         return {"results": [], "total_pages": 1}
     return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
-
-
-# ── Search History ─────────────────────────────────────────────────────────
-@api.post("/search-history", status_code=201)
-def add_search_history(
-    body: schemas.SearchHistoryIn,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    # Don't save duplicate searches
-    existing = db.query(models.SearchHistory).filter_by(
-        user_id=current_user.id, query=body.query
-    ).first()
-    if existing:
-        existing.searched_at = datetime.now(timezone.utc)
-        db.commit()
-        return {"status": "updated"}
-    entry = models.SearchHistory(
-        user_id=current_user.id,
-        query=body.query,
-    )
-    db.add(entry)
-    db.commit()
-    return {"status": "saved"}
-
-
-@api.get("/search-history")
-def get_search_history(
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    return (
-        db.query(models.SearchHistory)
-        .filter_by(user_id=current_user.id)
-        .order_by(models.SearchHistory.searched_at.desc())
-        .limit(20)
-        .all()
-    )
-
-
-@api.delete("/search-history/{query_id}", status_code=204)
-def delete_search_history(
-    query_id: int,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    db.query(models.SearchHistory).filter_by(
-        id=query_id, user_id=current_user.id
-    ).delete()
-    db.commit()
-
-
-@api.delete("/search-history", status_code=204)
-def clear_search_history(
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    db.query(models.SearchHistory).filter_by(user_id=current_user.id).delete()
-    db.commit()
