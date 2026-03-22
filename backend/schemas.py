@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
+import re
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -8,7 +9,21 @@ from datetime import datetime
 class UserRegister(BaseModel):
     username: str  = Field(..., min_length=3, max_length=30, pattern=r"^[a-zA-Z0-9_]+$")
     email:    EmailStr
-    password: str  = Field(..., min_length=6)
+    password: str  = Field(..., min_length=8)
+
+    # ✅ Server-side password validation
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('Password must contain at least one number')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+            raise ValueError('Password must contain at least one special character')
+        return v
 
 
 class UserLogin(BaseModel):
@@ -19,7 +34,7 @@ class UserLogin(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type:   str = "bearer"
-    user:         "UserOut"          # returned on login/register so frontend gets user immediately
+    user:         "UserOut"
 
 
 class UserOut(BaseModel):
@@ -51,7 +66,7 @@ class RatingOut(BaseModel):
     tmdb_id:    int
     score:      float
     created_at: datetime
-    updated_at: Optional[datetime]   # added in updated models
+    updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
@@ -59,9 +74,9 @@ class RatingOut(BaseModel):
 
 class MovieRatingSummary(BaseModel):
     tmdb_id:    int
-    average:    Optional[float]      # None if no ratings yet
+    average:    Optional[float]
     count:      int
-    user_score: Optional[float]      # None if user hasn't rated
+    user_score: Optional[float]
 
 
 # ── Comment ───────────────────────────────────────────────────────────────────
@@ -78,7 +93,7 @@ class CommentOut(BaseModel):
     created_at: datetime
     username:   str
     avatar_url: Optional[str]
-    is_mine:    bool = False          # True when the requesting user owns this comment
+    is_mine:    bool = False
 
     class Config:
         from_attributes = True
@@ -114,5 +129,4 @@ class ProfileOut(BaseModel):
     recent_ratings: List[RatingOut]
 
 
-# required because TokenOut references UserOut before it's fully defined
 TokenOut.model_rebuild()
