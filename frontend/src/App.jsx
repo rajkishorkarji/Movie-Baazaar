@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import NavBar from './components/NavBar';
 import Hero from './components/Hero';
 import API from './api';
+import { useAuth } from './context/AuthContext';
 
 function App() {
+  const { user } = useAuth();
   const [featuredMovie, setFeaturedMovie]     = useState(null);
   const [searchQuery, setSearchQuery]         = useState('');
   const [activeGenreId, setActiveGenreId]     = useState(null);
@@ -14,13 +16,10 @@ function App() {
   const [backendReady, setBackendReady]       = useState(false);
   const [waking, setWaking]                   = useState(true);
 
-  // ✅ Step 1: Ping backend first to wake up Render
-  // Step 2: Then fetch trending for hero
   useEffect(() => {
     const wakeAndLoad = async () => {
       setWaking(true);
       try {
-        // Ping backend — wakes up Render if sleeping
         await API.get('/ping');
       } catch (e) {
         console.warn('Backend ping failed, trying anyway...', e);
@@ -28,7 +27,6 @@ function App() {
       setBackendReady(true);
       setWaking(false);
 
-      // Now fetch trending for hero
       try {
         const r = await API.get('/trending');
         const movies = r.data?.results;
@@ -48,6 +46,15 @@ function App() {
     setActiveGenreId(null);
     setActiveGenreName('');
     setActiveCategory('search');
+
+    // ✅ Save search history if user is logged in
+    if (user && q.trim()) {
+      const token = localStorage.getItem('mb_token');
+      if (token) {
+        API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        API.post('/search-history', { query: q.trim() }).catch(() => {});
+      }
+    }
   };
 
   const handleGenreSelect = (genre) => {
@@ -65,7 +72,6 @@ function App() {
   };
 
   const renderRows = () => {
-    // ✅ Show loading until backend is ready
     if (!backendReady) {
       return (
         <div className="px-4 md:px-10 py-8">
@@ -148,12 +154,7 @@ function App() {
       <footer className="border-t border-gray-800/50 bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto px-4 md:px-10 py-6 md:py-10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
-            <img
-              src="/logo.svg"
-              alt="Movie Baazaar"
-              className="h-10 md:h-14 w-auto"
-              onError={(e) => e.target.style.display='none'}
-            />
+            <img src="/logo.svg" alt="Movie Baazaar" className="h-10 md:h-14 w-auto" onError={(e) => e.target.style.display='none'} />
             <div className="flex items-center gap-4 text-sm">
               <a href="https://www.linkedin.com/in/rajkishor-karji-43456a2a9/" target="_blank" className="text-gray-500 hover:text-white transition-colors">LinkedIn</a>
               <a href="https://github.com/rajkishorkarji" target="_blank" className="text-gray-500 hover:text-white transition-colors">GitHub</a>

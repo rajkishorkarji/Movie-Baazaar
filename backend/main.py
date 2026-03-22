@@ -442,3 +442,62 @@ def get_web_series(page: int = 1):
     if not data:
         return {"results": [], "total_pages": 1}
     return {"results": data.get("results", []), "total_pages": data.get("total_pages", 1)}
+
+
+# ── Search History ─────────────────────────────────────────────────────────
+@api.post("/search-history", status_code=201)
+def add_search_history(
+    body: schemas.SearchHistoryIn,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    # Don't save duplicate searches
+    existing = db.query(models.SearchHistory).filter_by(
+        user_id=current_user.id, query=body.query
+    ).first()
+    if existing:
+        existing.searched_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"status": "updated"}
+    entry = models.SearchHistory(
+        user_id=current_user.id,
+        query=body.query,
+    )
+    db.add(entry)
+    db.commit()
+    return {"status": "saved"}
+
+
+@api.get("/search-history")
+def get_search_history(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    return (
+        db.query(models.SearchHistory)
+        .filter_by(user_id=current_user.id)
+        .order_by(models.SearchHistory.searched_at.desc())
+        .limit(20)
+        .all()
+    )
+
+
+@api.delete("/search-history/{query_id}", status_code=204)
+def delete_search_history(
+    query_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db.query(models.SearchHistory).filter_by(
+        id=query_id, user_id=current_user.id
+    ).delete()
+    db.commit()
+
+
+@api.delete("/search-history", status_code=204)
+def clear_search_history(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db.query(models.SearchHistory).filter_by(user_id=current_user.id).delete()
+    db.commit()

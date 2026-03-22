@@ -30,9 +30,10 @@ class User(Base):
     is_verified     = Column(Boolean, default=True)
     created_at      = Column(DateTime, default=_utcnow)
 
-    ratings  = relationship("Rating",       back_populates="user", cascade="all, delete-orphan")
-    comments = relationship("Comment",      back_populates="user", cascade="all, delete-orphan")
-    history  = relationship("WatchHistory", back_populates="user", cascade="all, delete-orphan")
+    ratings        = relationship("Rating",        back_populates="user", cascade="all, delete-orphan")
+    comments       = relationship("Comment",       back_populates="user", cascade="all, delete-orphan")
+    history        = relationship("WatchHistory",  back_populates="user", cascade="all, delete-orphan")
+    search_history = relationship("SearchHistory", back_populates="user", cascade="all, delete-orphan")
 
 
 class Rating(Base):
@@ -72,3 +73,13 @@ class WatchHistory(Base):
     watched_at  = Column(DateTime, default=_utcnow)
 
     user = relationship("User", back_populates="history")
+
+
+class SearchHistory(Base):
+    __tablename__ = "search_history"
+    id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    query       = Column(String, nullable=False)
+    searched_at = Column(DateTime, default=_utcnow)
+
+    user = relationship("User", back_populates="search_history")

@@ -18,7 +18,6 @@ class UserRegister(BaseModel):
             raise ValueError('Only Gmail addresses are allowed')
         return v
 
-    # ✅ Server-side password validation
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
@@ -117,6 +116,21 @@ class HistoryOut(BaseModel):
     movie_title: str
     poster_path: Optional[str]
     watched_at:  datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── Search History ────────────────────────────────────────────────────────────
+
+class SearchHistoryIn(BaseModel):
+    query: str = Field(..., min_length=1, max_length=200)
+
+
+class SearchHistoryOut(BaseModel):
+    id:          int
+    query:       str
+    searched_at: datetime
 
     class Config:
         from_attributes = True
