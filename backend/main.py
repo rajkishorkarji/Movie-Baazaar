@@ -120,12 +120,6 @@ def get_profile(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    history = (
-        db.query(models.WatchHistory)
-        .filter_by(user_id=current_user.id)
-        .order_by(models.WatchHistory.watched_at.desc())
-        .limit(20).all()
-    )
     ratings = (
         db.query(models.Rating)
         .filter_by(user_id=current_user.id)
@@ -136,8 +130,6 @@ def get_profile(
         "user":           current_user,
         "ratings_count":  db.query(models.Rating).filter_by(user_id=current_user.id).count(),
         "comments_count": db.query(models.Comment).filter_by(user_id=current_user.id).count(),
-        "history_count":  db.query(models.WatchHistory).filter_by(user_id=current_user.id).count(),
-        "recent_history": history,
         "recent_ratings": ratings,
     }
 
