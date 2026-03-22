@@ -232,6 +232,13 @@ def add_comment(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
+    # ✅ Check if user already reviewed this movie
+    existing = db.query(models.Comment).filter_by(
+        user_id=current_user.id, tmdb_id=body.tmdb_id
+    ).first()
+    if existing:
+        raise HTTPException(400, "You have already reviewed this movie")
+
     comment = models.Comment(
         user_id=current_user.id,
         tmdb_id=body.tmdb_id,
