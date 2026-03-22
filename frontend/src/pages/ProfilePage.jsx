@@ -20,28 +20,28 @@ const ProfilePage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [ratings, setRatings]               = useState([]);
-  const [reviews, setReviews]               = useState([]);
-  const [searchHistory, setSearchHistory]   = useState([]);
-  const [commentsCount, setCommentsCount]   = useState(0);
-  const [tab, setTab]                       = useState('searchHistory');
-  const [loading, setLoading]               = useState(true);
+  const [ratings, setRatings]         = useState([]);
+  const [reviews, setReviews]         = useState([]);
+  const [favourites, setFavourites]   = useState([]);
+  const [commentsCount, setCommentsCount] = useState(0);
+  const [tab, setTab]                 = useState('favourites');
+  const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
     if (!user) { navigate('/'); return; }
     const fetchAll = async () => {
       setLoading(true);
       try {
-        const [profileRes, ratingsRes, reviewsRes, searchRes] = await Promise.all([
+        const [profileRes, ratingsRes, reviewsRes, favRes] = await Promise.all([
           API.get('/profile'),
           API.get('/my-ratings'),
           API.get('/my-reviews'),
-          API.get('/search-history'),
+          API.get('/favourites'),
         ]);
         setCommentsCount(profileRes.data.comments_count || 0);
         setRatings(ratingsRes.data || []);
         setReviews(reviewsRes.data || []);
-        setSearchHistory(searchRes.data || []);
+        setFavourites(favRes.data || []);
       } catch (e) {
         console.error('Profile load error:', e);
       } finally {
@@ -51,17 +51,10 @@ const ProfilePage = () => {
     fetchAll();
   }, [user]);
 
-  const handleDeleteSearch = async (id) => {
+  const handleRemoveFavourite = async (tmdb_id) => {
     try {
-      await API.delete(`/search-history/${id}`);
-      setSearchHistory(prev => prev.filter(s => s.id !== id));
-    } catch {}
-  };
-
-  const handleClearAllSearch = async () => {
-    try {
-      await API.delete('/search-history');
-      setSearchHistory([]);
+      await API.delete(`/favourites/${tmdb_id}`);
+      setFavourites(prev => prev.filter(f => f.tmdb_id !== tmdb_id));
     } catch {}
   };
 
@@ -78,9 +71,9 @@ const ProfilePage = () => {
   const initials = user.username.slice(0, 2).toUpperCase();
 
   const TABS = [
-    { id: 'searchHistory', label: '🔍 Search History', count: searchHistory.length },
-    { id: 'ratings',       label: '⭐ Ratings',        count: ratings.length },
-    { id: 'reviews',       label: '💬 Reviews',        count: reviews.length },
+    { id: 'favourites', label: '❤️ Favourites', count: favourites.length },
+    { id: 'ratings',    label: '⭐ Ratings',    count: ratings.length },
+    { id: 'reviews',    label: '💬 Reviews',    count: reviews.length },
   ];
 
   return (
@@ -106,12 +99,12 @@ const ProfilePage = () => {
         </button>
       </div>
 
-      {/* Stats — 3 columns */}
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
         {[
-          { label: 'Searches', value: loading ? '...' : searchHistory.length },
-          { label: 'Rated',    value: loading ? '...' : ratings.length },
-          { label: 'Reviews',  value: loading ? '...' : commentsCount },
+          { label: 'Favourites', value: loading ? '...' : favourites.length },
+          { label: 'Rated',      value: loading ? '...' : ratings.length },
+          { label: 'Reviews',    value: loading ? '...' : commentsCount },
         ].map(s => (
           <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 md:p-4 text-center">
             <p className="text-2xl md:text-3xl font-black text-red-500">{s.value}</p>
@@ -132,47 +125,56 @@ const ProfilePage = () => {
           >
             {t.label}
             {t.count > 0 && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                tab === t.id ? 'bg-white/20' : 'bg-white/10'
-              }`}>{t.count}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-white/20' : 'bg-white/10'}`}>
+                {t.count}
+              </span>
             )}
           </button>
         ))}
       </div>
 
-      {/* ── Search History Tab ── */}
-      {tab === 'searchHistory' && (
+      {/* ── Favourites Tab ── */}
+      {tab === 'favourites' && (
         <div>
-          {searchHistory.length > 0 && (
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={handleClearAllSearch}
-                className="text-xs text-gray-500 hover:text-red-400 border border-white/10 hover:border-red-500/30 px-3 py-1.5 rounded-lg transition-all"
-              >
-                Clear All
-              </button>
-            </div>
-          )}
           {loading ? (
-            [...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-800/60 animate-pulse rounded-xl mb-2" />
-            ))
-          ) : searchHistory.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i}>
+                  <div className="w-full aspect-[2/3] bg-gray-800/60 animate-pulse rounded-xl" />
+                  <div className="mt-2 h-3 bg-gray-800/40 animate-pulse rounded w-3/4" />
+                </div>
+              ))}
+            </div>
+          ) : favourites.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-4xl mb-3">🔍</p>
-              <p className="text-gray-500 text-sm">No search history yet!</p>
-              <p className="text-gray-700 text-xs mt-1">Search for a movie to see it here</p>
+              <p className="text-5xl mb-3">🤍</p>
+              <p className="text-gray-500 text-sm">No favourites yet!</p>
+              <p className="text-gray-700 text-xs mt-1">Tap the ❤️ button on any movie to add it here</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {searchHistory.map(s => (
-                <div key={s.id} className="group flex items-center gap-3 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 rounded-xl px-4 py-3 transition-all">
-                  <span className="text-gray-500 text-sm flex-none">🔍</span>
-                  <span className="flex-1 text-white text-sm">{s.query}</span>
-                  <span className="text-gray-700 text-xs flex-none">{timeAgo(s.searched_at)}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {favourites.map(f => (
+                <div key={f.id} className="relative group cursor-pointer">
+                  <div onClick={() => navigate(`/movie/${f.tmdb_id}`)}>
+                    <div className="relative overflow-hidden rounded-xl border border-white/5 group-hover:border-red-600/30 transition-all">
+                      <img
+                        src={f.poster_path
+                          ? `https://image.tmdb.org/t/p/w342${f.poster_path}`
+                          : 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster'}
+                        alt={f.movie_title}
+                        className="w-full aspect-[2/3] object-cover group-hover:opacity-80 transition-opacity"
+                        onError={(e) => { e.target.src='https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster'; }}
+                      />
+                      {/* Heart badge */}
+                      <div className="absolute top-2 right-2 bg-red-600 rounded-full w-7 h-7 flex items-center justify-center text-sm">❤️</div>
+                    </div>
+                    <p className="text-white text-xs font-semibold mt-2 line-clamp-1">{f.movie_title}</p>
+                  </div>
+                  {/* Remove button */}
                   <button
-                    onClick={() => handleDeleteSearch(s.id)}
-                    className="opacity-0 group-hover:opacity-100 text-gray-700 hover:text-red-500 text-xs transition-all flex-none p-1"
+                    onClick={() => handleRemoveFavourite(f.tmdb_id)}
+                    className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 bg-black/80 hover:bg-red-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center transition-all"
+                    title="Remove from favourites"
                   >✕</button>
                 </div>
               ))}
@@ -181,7 +183,7 @@ const ProfilePage = () => {
         </div>
       )}
 
-      {/* ── Ratings Tab — shows poster + title + star rating ── */}
+      {/* ── Ratings Tab ── */}
       {tab === 'ratings' && (
         <div>
           {loading ? (
@@ -195,19 +197,14 @@ const ProfilePage = () => {
             </div>
           ) : ratings.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-4xl mb-3">⭐</p>
+              <p className="text-5xl mb-3">⭐</p>
               <p className="text-gray-500 text-sm">No ratings yet!</p>
               <p className="text-gray-700 text-xs mt-1">Rate a movie to see it here</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {ratings.map(r => (
-                <div
-                  key={r.id}
-                  className="cursor-pointer group"
-                  onClick={() => navigate(`/movie/${r.tmdb_id}`)}
-                >
-                  {/* Poster */}
+                <div key={r.id} className="cursor-pointer group" onClick={() => navigate(`/movie/${r.tmdb_id}`)}>
                   <div className="relative overflow-hidden rounded-xl border border-white/5 group-hover:border-red-600/30 transition-all">
                     <img
                       src={r.poster_path
@@ -215,17 +212,15 @@ const ProfilePage = () => {
                         : 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster'}
                       alt={r.movie_title}
                       className="w-full aspect-[2/3] object-cover group-hover:opacity-80 transition-opacity"
-                      onError={(e) => { e.target.src = 'https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster'; }}
+                      onError={(e) => { e.target.src='https://via.placeholder.com/300x450/1a1a1a/555?text=No+Poster'; }}
                     />
-                    {/* Rating badge on poster */}
+                    {/* Rating badge */}
                     <div className="absolute top-2 right-2 bg-black/90 rounded-lg px-2 py-1 flex items-center gap-1">
                       <span className="text-yellow-400 text-xs">★</span>
                       <span className="text-white text-xs font-black">{r.score}</span>
                     </div>
                   </div>
-                  {/* Movie title */}
                   <p className="text-white text-xs font-semibold mt-2 line-clamp-1">{r.movie_title}</p>
-                  {/* Stars */}
                   <div className="flex gap-0.5 mt-0.5">
                     {[1,2,3,4,5].map(s => (
                       <span key={s} className={`text-xs ${s <= r.score ? 'text-yellow-400' : 'text-gray-700'}`}>★</span>
@@ -238,7 +233,7 @@ const ProfilePage = () => {
         </div>
       )}
 
-      {/* ── Reviews Tab — shows poster + title + review text ── */}
+      {/* ── Reviews Tab ── */}
       {tab === 'reviews' && (
         <div className="space-y-3">
           {loading ? (
@@ -247,45 +242,32 @@ const ProfilePage = () => {
             ))
           ) : reviews.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-4xl mb-3">💬</p>
+              <p className="text-5xl mb-3">💬</p>
               <p className="text-gray-500 text-sm">No reviews yet!</p>
               <p className="text-gray-700 text-xs mt-1">Write a review on any movie to see it here</p>
             </div>
           ) : reviews.map(r => (
-            <div
-              key={r.id}
-              className="group flex gap-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 rounded-xl p-4 transition-all"
-            >
-              {/* Movie poster small */}
-              <div
-                className="flex-none cursor-pointer"
-                onClick={() => navigate(`/movie/${r.tmdb_id}`)}
-              >
+            <div key={r.id} className="group flex gap-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 rounded-xl p-4 transition-all">
+              <div className="flex-none cursor-pointer" onClick={() => navigate(`/movie/${r.tmdb_id}`)}>
                 <img
                   src={r.poster_path
                     ? `https://image.tmdb.org/t/p/w92${r.poster_path}`
                     : 'https://via.placeholder.com/92x138/1a1a1a/555?text=?'}
                   alt={r.movie_title}
                   className="w-12 h-[72px] object-cover rounded-lg border border-white/5 hover:border-red-600/30 transition-all"
-                  onError={(e) => { e.target.src = 'https://via.placeholder.com/92x138/1a1a1a/555?text=?'; }}
+                  onError={(e) => { e.target.src='https://via.placeholder.com/92x138/1a1a1a/555?text=?'; }}
                 />
               </div>
-
-              {/* Review content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <button
-                    onClick={() => navigate(`/movie/${r.tmdb_id}`)}
-                    className="text-white text-sm font-semibold hover:text-red-400 transition-colors line-clamp-1"
-                  >
+                  <button onClick={() => navigate(`/movie/${r.tmdb_id}`)}
+                    className="text-white text-sm font-semibold hover:text-red-400 transition-colors line-clamp-1">
                     {r.movie_title}
                   </button>
                   <span className="text-gray-700 text-xs flex-none">{timeAgo(r.created_at)}</span>
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed break-words">{r.body}</p>
               </div>
-
-              {/* Delete */}
               <button
                 onClick={() => handleDeleteReview(r.id)}
                 className="opacity-0 group-hover:opacity-100 text-gray-700 hover:text-red-500 text-xs transition-all flex-none self-start p-1"

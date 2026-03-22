@@ -198,7 +198,7 @@ def delete_rating(
     db.commit()
 
 
-# ── My Ratings with movie info ────────────────────────────────────────────────
+# ── My Ratings with movie info ─────────────────────────────────────────────────
 @api.get("/my-ratings")
 def get_my_ratings(
     db: Session = Depends(database.get_db),
@@ -293,7 +293,7 @@ def delete_comment(
     db.commit()
 
 
-# ── My Reviews with movie info ────────────────────────────────────────────────
+# ── My Reviews with movie info ─────────────────────────────────────────────────
 @api.get("/my-reviews")
 def get_my_reviews(
     db: Session = Depends(database.get_db),
@@ -373,6 +373,69 @@ def remove_history(
         user_id=current_user.id, tmdb_id=tmdb_id
     ).delete()
     db.commit()
+
+
+# ── Favourites ────────────────────────────────────────────────────────────────
+@api.post("/favourites", status_code=201)
+def add_favourite(
+    body: schemas.FavouriteIn,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    existing = db.query(models.Favourite).filter_by(
+        user_id=current_user.id, tmdb_id=body.tmdb_id
+    ).first()
+    if existing:
+        return {"status": "already_favourited", "is_favourite": True}
+    entry = models.Favourite(
+        user_id=current_user.id,
+        tmdb_id=body.tmdb_id,
+        movie_title=body.movie_title,
+        poster_path=body.poster_path,
+    )
+    db.add(entry)
+    db.commit()
+    return {"status": "added", "is_favourite": True}
+
+
+@api.delete("/favourites/{tmdb_id}", status_code=200)
+def remove_favourite(
+    tmdb_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db.query(models.Favourite).filter_by(
+        user_id=current_user.id, tmdb_id=tmdb_id
+    ).delete()
+    db.commit()
+    return {"status": "removed", "is_favourite": False}
+
+
+@api.get("/favourites")
+def get_favourites(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    return (
+        db.query(models.Favourite)
+        .filter_by(user_id=current_user.id)
+        .order_by(models.Favourite.added_at.desc())
+        .all()
+    )
+
+
+@api.get("/favourites/check/{tmdb_id}")
+def check_favourite(
+    tmdb_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: Optional[models.User] = Depends(auth.get_optional_user),
+):
+    if not current_user:
+        return {"is_favourite": False}
+    exists = db.query(models.Favourite).filter_by(
+        user_id=current_user.id, tmdb_id=tmdb_id
+    ).first()
+    return {"is_favourite": bool(exists)}
 
 
 # ── Search History ────────────────────────────────────────────────────────────

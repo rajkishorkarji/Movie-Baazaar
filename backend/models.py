@@ -34,6 +34,7 @@ class User(Base):
     comments       = relationship("Comment",       back_populates="user", cascade="all, delete-orphan")
     history        = relationship("WatchHistory",  back_populates="user", cascade="all, delete-orphan")
     search_history = relationship("SearchHistory", back_populates="user", cascade="all, delete-orphan")
+    favourites     = relationship("Favourite",     back_populates="user", cascade="all, delete-orphan")
 
 
 class Rating(Base):
@@ -83,3 +84,19 @@ class SearchHistory(Base):
     searched_at = Column(DateTime, default=_utcnow)
 
     user = relationship("User", back_populates="search_history")
+
+
+class Favourite(Base):
+    __tablename__ = "favourites"
+    id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    tmdb_id     = Column(Integer, nullable=False, index=True)
+    movie_title = Column(String)
+    poster_path = Column(String, nullable=True)
+    added_at    = Column(DateTime, default=_utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "tmdb_id", name="unique_user_favourite"),
+    )
+
+    user = relationship("User", back_populates="favourites")

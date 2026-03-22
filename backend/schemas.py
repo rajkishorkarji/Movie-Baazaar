@@ -121,6 +121,25 @@ class HistoryOut(BaseModel):
         from_attributes = True
 
 
+# ── Favourite ─────────────────────────────────────────────────────────────────
+
+class FavouriteIn(BaseModel):
+    tmdb_id:     int
+    movie_title: str
+    poster_path: Optional[str] = None
+
+
+class FavouriteOut(BaseModel):
+    id:          int
+    tmdb_id:     int
+    movie_title: str
+    poster_path: Optional[str]
+    added_at:    datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ── Search History ────────────────────────────────────────────────────────────
 
 class SearchHistoryIn(BaseModel):
