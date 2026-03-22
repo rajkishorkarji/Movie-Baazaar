@@ -32,7 +32,7 @@ api.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://movie-baazaar-zw3k.vercel.app",
-        "https://movie-baazaar12.vercel.app/",
+        "https://movie-baazaar12.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000",
     ],
