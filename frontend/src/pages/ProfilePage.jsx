@@ -80,6 +80,12 @@ const ProfilePage = () => {
     <div className="bg-[#0a0a0a] min-h-screen text-white pt-20 md:pt-24 px-4 md:px-16 pb-16">
 
       {/* Profile Header */}
+      <button
+  onClick={() => navigate(-1)}
+  className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-6 transition-colors"
+  >
+  ← Back
+      </button>
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-6 mb-8 md:mb-10">
         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-red-600 flex items-center justify-center text-xl md:text-2xl font-black flex-none">
           {initials}
