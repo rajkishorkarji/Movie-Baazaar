@@ -25,7 +25,7 @@ const ProfilePage = () => {
   const [reviews, setReviews]           = useState([]);
   const [searchHistory, setSearchHistory] = useState([]);
   const [commentsCount, setCommentsCount] = useState(0);
-  const [tab, setTab]                   = useState('history');
+  const [tab, setTab] = useState('ratings');
   const [loading, setLoading]           = useState(true);
 
   useEffect(() => {
@@ -79,11 +79,11 @@ const ProfilePage = () => {
   const initials = user.username.slice(0, 2).toUpperCase();
 
   const TABS = [
-    { id: 'history',       label: '🎬 History',        count: history.length },
-    { id: 'ratings',       label: '⭐ Ratings',         count: ratings.length },
-    { id: 'reviews',       label: '💬 Reviews',         count: reviews.length },
-    { id: 'searchHistory', label: '🔍 Search History',  count: searchHistory.length },
-  ];
+  { id: 'searchHistory', label: '🔍 Search History',  count: searchHistory.length },
+  { id: 'ratings',       label: '⭐ Ratings',         count: ratings.length },
+  { id: 'reviews',       label: '💬 Reviews',         count: reviews.length },
+  
+];
 
   return (
     <div className="bg-[#0a0a0a] min-h-screen text-white pt-20 md:pt-24 px-4 md:px-16 pb-16">
@@ -111,10 +111,10 @@ const ProfilePage = () => {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         {[
-          { label: 'Watched',   value: loading ? '...' : history.length },
+          { label: 'Searches',  value: loading ? '...' : searchHistory.length },
           { label: 'Rated',     value: loading ? '...' : ratings.length },
           { label: 'Reviews',   value: loading ? '...' : commentsCount },
-          { label: 'Searches',  value: loading ? '...' : searchHistory.length },
+
         ].map(s => (
           <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 md:p-4 text-center">
             <p className="text-2xl md:text-3xl font-black text-red-500">{s.value}</p>
