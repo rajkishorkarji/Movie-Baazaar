@@ -16,11 +16,11 @@ const parseError = (err) => {
 
 // ✅ Password rules
 const PASSWORD_RULES = [
-  { id: 'length',    label: 'At least 8 characters',          test: (p) => p.length >= 8 },
-  { id: 'uppercase', label: 'At least one uppercase letter',   test: (p) => /[A-Z]/.test(p) },
-  { id: 'lowercase', label: 'At least one lowercase letter',   test: (p) => /[a-z]/.test(p) },
-  { id: 'number',    label: 'At least one number',             test: (p) => /[0-9]/.test(p) },
-  { id: 'special',   label: 'At least one special character',  test: (p) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
+  { id: 'uppercase', label: 'Start with uppercase letter (e.g. R)', test: (p) => /^[A-Z]/.test(p) },
+  { id: 'lowercase', label: 'Followed by lowercase letters (e.g. aj)',   test: (p) => /^[A-Z][a-z]+/.test(p) },
+  { id: 'special', label: 'Special character (@)',       test: (p) => /^[A-Z][a-z]+@/.test(p) },
+  { id: 'number',  label: 'End with numbers (1234)', test: (p) => /^[A-Z][a-z]+@[0-9]+$/.test(p) },
+  { id: 'length',    label: 'At least 8 characters total',          test: (p) => p.length >= 8 },
 ];
 
 const PasswordStrength = ({ password }) => {
@@ -80,8 +80,8 @@ const AuthModal = ({ onClose }) => {
 
   // ✅ Validate email format
   const isValidEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+  return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
+};
 
   // ✅ Validate all fields
   const validate = () => {
@@ -99,7 +99,7 @@ const AuthModal = ({ onClose }) => {
     if (!form.email.trim())
       errors.email = 'Email is required';
     else if (!isValidEmail(form.email.trim()))
-      errors.email = 'Please enter a valid email address';
+      errors.email = 'Only Gmail addresses allowed (example@gmail.com)';
 
     if (!form.password)
       errors.password = 'Password is required';
