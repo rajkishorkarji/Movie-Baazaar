@@ -326,62 +326,6 @@ def get_my_reviews(
     return result
 
 
-# ── Watch History ─────────────────────────────────────────────────────────────
-@api.post("/history", status_code=201)
-def add_to_history(
-    body: schemas.HistoryIn,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
-    recent = (
-        db.query(models.WatchHistory)
-        .filter(
-            models.WatchHistory.user_id == current_user.id,
-            models.WatchHistory.tmdb_id == body.tmdb_id,
-            models.WatchHistory.watched_at > cutoff,
-        )
-        .first()
-    )
-    if recent:
-        return {"status": "already_tracked"}
-    entry = models.WatchHistory(
-        user_id=current_user.id,
-        tmdb_id=body.tmdb_id,
-        movie_title=body.movie_title,
-        poster_path=body.poster_path,
-    )
-    db.add(entry)
-    db.commit()
-    return {"status": "tracked"}
-
-
-@api.get("/history", response_model=List[schemas.HistoryOut])
-def get_history(
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    return (
-        db.query(models.WatchHistory)
-        .filter_by(user_id=current_user.id)
-        .order_by(models.WatchHistory.watched_at.desc())
-        .limit(50)
-        .all()
-    )
-
-
-@api.delete("/history/{tmdb_id}", status_code=204)
-def remove_history(
-    tmdb_id: int,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    db.query(models.WatchHistory).filter_by(
-        user_id=current_user.id, tmdb_id=tmdb_id
-    ).delete()
-    db.commit()
-
-
 # ── Favourites ────────────────────────────────────────────────────────────────
 @api.post("/favourites", status_code=201)
 def add_favourite(
@@ -443,61 +387,6 @@ def check_favourite(
         user_id=current_user.id, tmdb_id=tmdb_id
     ).first()
     return {"is_favourite": bool(exists)}
-
-
-# ── Search History ────────────────────────────────────────────────────────────
-@api.post("/search-history", status_code=201)
-def add_search_history(
-    body: schemas.SearchHistoryIn,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    existing = db.query(models.SearchHistory).filter_by(
-        user_id=current_user.id, query=body.query
-    ).first()
-    if existing:
-        existing.searched_at = datetime.now(timezone.utc)
-        db.commit()
-        return {"status": "updated"}
-    entry = models.SearchHistory(user_id=current_user.id, query=body.query)
-    db.add(entry)
-    db.commit()
-    return {"status": "saved"}
-
-
-@api.get("/search-history")
-def get_search_history(
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    return (
-        db.query(models.SearchHistory)
-        .filter_by(user_id=current_user.id)
-        .order_by(models.SearchHistory.searched_at.desc())
-        .limit(20)
-        .all()
-    )
-
-
-@api.delete("/search-history/{query_id}", status_code=204)
-def delete_search_history(
-    query_id: int,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    db.query(models.SearchHistory).filter_by(
-        id=query_id, user_id=current_user.id
-    ).delete()
-    db.commit()
-
-
-@api.delete("/search-history", status_code=204)
-def clear_search_history(
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-):
-    db.query(models.SearchHistory).filter_by(user_id=current_user.id).delete()
-    db.commit()
 
 
 # ── TMDB Routes ───────────────────────────────────────────────────────────────

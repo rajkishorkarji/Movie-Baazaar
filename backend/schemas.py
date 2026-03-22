@@ -102,25 +102,6 @@ class CommentOut(BaseModel):
         from_attributes = True
 
 
-# ── Watch History ─────────────────────────────────────────────────────────────
-
-class HistoryIn(BaseModel):
-    tmdb_id:     int
-    movie_title: str
-    poster_path: Optional[str] = None
-
-
-class HistoryOut(BaseModel):
-    id:          int
-    tmdb_id:     int
-    movie_title: str
-    poster_path: Optional[str]
-    watched_at:  datetime
-
-    class Config:
-        from_attributes = True
-
-
 # ── Favourite ─────────────────────────────────────────────────────────────────
 
 class FavouriteIn(BaseModel):
@@ -139,20 +120,6 @@ class FavouriteOut(BaseModel):
     class Config:
         from_attributes = True
 
-
-# ── Search History ────────────────────────────────────────────────────────────
-
-class SearchHistoryIn(BaseModel):
-    query: str = Field(..., min_length=1, max_length=200)
-
-
-class SearchHistoryOut(BaseModel):
-    id:          int
-    query:       str
-    searched_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ── Profile ───────────────────────────────────────────────────────────────────

@@ -52,7 +52,7 @@ function App() {
       const token = localStorage.getItem('mb_token');
       if (token) {
         API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        API.post('/search-history', { query: q.trim() }).catch(() => {});
+  
       }
     }
   };

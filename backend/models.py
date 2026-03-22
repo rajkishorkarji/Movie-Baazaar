@@ -32,8 +32,6 @@ class User(Base):
 
     ratings        = relationship("Rating",        back_populates="user", cascade="all, delete-orphan")
     comments       = relationship("Comment",       back_populates="user", cascade="all, delete-orphan")
-    history        = relationship("WatchHistory",  back_populates="user", cascade="all, delete-orphan")
-    search_history = relationship("SearchHistory", back_populates="user", cascade="all, delete-orphan")
     favourites     = relationship("Favourite",     back_populates="user", cascade="all, delete-orphan")
 
 
@@ -62,28 +60,6 @@ class Comment(Base):
     created_at = Column(DateTime, default=_utcnow)
 
     user = relationship("User", back_populates="comments")
-
-
-class WatchHistory(Base):
-    __tablename__ = "watch_history"
-    id          = Column(Integer, primary_key=True, index=True)
-    user_id     = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    tmdb_id     = Column(Integer, nullable=False, index=True)
-    movie_title = Column(String)
-    poster_path = Column(String, nullable=True)
-    watched_at  = Column(DateTime, default=_utcnow)
-
-    user = relationship("User", back_populates="history")
-
-
-class SearchHistory(Base):
-    __tablename__ = "search_history"
-    id          = Column(Integer, primary_key=True, index=True)
-    user_id     = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    query       = Column(String, nullable=False)
-    searched_at = Column(DateTime, default=_utcnow)
-
-    user = relationship("User", back_populates="search_history")
 
 
 class Favourite(Base):

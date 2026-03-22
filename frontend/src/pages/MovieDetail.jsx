@@ -107,13 +107,6 @@ const MovieDetail = () => {
     API.get(`/favourites/check/${id}`).then(r => setIsFavourite(r.data.is_favourite)).catch(() => {});
   }, [id, loadRatings]);
 
-  useEffect(() => {
-    if (!movie || !user) return;
-    const token = localStorage.getItem('mb_token');
-    if (!token) return;
-    API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    API.post('/history', { tmdb_id: movie.id, movie_title: movie.title, poster_path: movie.poster_path }).catch(() => {});
-  }, [movie, user]);
 
   const handleRate = async (score) => {
     if (!user) { setShowAuth(true); return; }
